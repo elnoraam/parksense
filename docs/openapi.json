@@ -1,0 +1,586 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ParkSense API",
+    "description": "Spesifikasi antarmuka layanan REST API ParkSense (Bagian 2.3).",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/gate/entry-tap": {
+      "post": {
+        "tags": [
+          "gate"
+        ],
+        "summary": "Entry Tap",
+        "description": "Validasi kartu, catat masuk, minta rekomendasi lantai dan slot, lalu buka palang.",
+        "operationId": "entry_tap_api_v1_gate_entry_tap_post",
+        "parameters": [
+          {
+            "name": "x-device-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Device-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EntryTap"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/occupancy/floors": {
+      "get": {
+        "tags": [
+          "occupancy"
+        ],
+        "summary": "Get Occupancy Floors",
+        "description": "Ketersediaan slot per lantai (UNKNOWN dihitung terpisah dari available).",
+        "operationId": "get_occupancy_floors_api_v1_occupancy_floors_get",
+        "parameters": [
+          {
+            "name": "x-device-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Device-Key"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/slots/{slot_id}/status": {
+      "put": {
+        "tags": [
+          "slots"
+        ],
+        "summary": "Update Slot Status",
+        "description": "Gateway IoT melaporkan status slot; platform memperbarui status dan memicu LED.",
+        "operationId": "update_slot_status_api_v1_slots__slot_id__status_put",
+        "parameters": [
+          {
+            "name": "slot_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slot Id"
+            }
+          },
+          {
+            "name": "x-device-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Device-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SlotStatusUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/slots": {
+      "get": {
+        "tags": [
+          "slots"
+        ],
+        "summary": "List Slots",
+        "description": "Pendukung (di luar spesifikasi 2.3): semua slot beserta warna LED, untuk peta slot.",
+        "operationId": "list_slots_api_v1_slots_get",
+        "parameters": [
+          {
+            "name": "x-device-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Device-Key"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai/predictions/occupancy": {
+      "get": {
+        "tags": [
+          "ai"
+        ],
+        "summary": "Get Occupancy Prediction",
+        "description": "Prediksi okupansi per jam per lantai pada rentang jam (inklusif) beserta advisory.",
+        "operationId": "get_occupancy_prediction_api_v1_ai_predictions_occupancy_get",
+        "parameters": [
+          {
+            "name": "fromHour",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Fromhour"
+            }
+          },
+          {
+            "name": "toHour",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Tohour"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/dev/scenario/{name}": {
+      "post": {
+        "tags": [
+          "dev"
+        ],
+        "summary": "Load Scenario",
+        "description": "reset | peak_hour (lantai 1 hampir penuh, lantai 2 dibuka) | all_full | sensor_stale.",
+        "operationId": "load_scenario_api_v1_dev_scenario__name__post",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          },
+          {
+            "name": "x-device-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Device-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/dev/fault/recommendation": {
+      "post": {
+        "tags": [
+          "dev"
+        ],
+        "summary": "Set Recommendation Fault",
+        "description": "Paksa modul rekomendasi gagal (untuk TC-09). enabled=false untuk memulihkan.",
+        "operationId": "set_recommendation_fault_api_v1_dev_fault_recommendation_post",
+        "parameters": [
+          {
+            "name": "enabled",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Enabled"
+            }
+          },
+          {
+            "name": "x-device-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Device-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "EntryTap": {
+        "properties": {
+          "gateId": {
+            "type": "string",
+            "title": "Gateid"
+          },
+          "cardId": {
+            "type": "string",
+            "title": "Cardid"
+          },
+          "vehicleType": {
+            "type": "string",
+            "title": "Vehicletype",
+            "default": "MOTORCYCLE"
+          },
+          "tapTime": {
+            "type": "string",
+            "title": "Taptime"
+          }
+        },
+        "type": "object",
+        "required": [
+          "gateId",
+          "cardId",
+          "tapTime"
+        ],
+        "title": "EntryTap"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "SlotStatusUpdate": {
+        "properties": {
+          "gatewayId": {
+            "type": "string",
+            "title": "Gatewayid"
+          },
+          "sensorType": {
+            "type": "string",
+            "title": "Sensortype"
+          },
+          "rawSensorValue": {
+            "type": "number",
+            "title": "Rawsensorvalue"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit",
+            "default": "cm"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "measuredAt": {
+            "type": "string",
+            "title": "Measuredat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "gatewayId",
+          "sensorType",
+          "rawSensorValue",
+          "status",
+          "measuredAt"
+        ],
+        "title": "SlotStatusUpdate"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}
