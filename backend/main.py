@@ -8,7 +8,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import db, errors
-from .routes import occupancy, slots, stub
+from .routes import gate, occupancy, slots, stub
 
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 
@@ -32,6 +32,7 @@ errors.install(app)
 
 api = APIRouter(prefix="/api/v1")
 # Endpoint asli didaftarkan di atas baris stub; stub paling akhir (akan dihapus).
+api.include_router(gate.router)
 api.include_router(occupancy.router)
 api.include_router(slots.router)
 api.include_router(stub.router)
