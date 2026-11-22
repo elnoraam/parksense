@@ -9,8 +9,8 @@ lock = threading.RLock()
 _conn: sqlite3.Connection | None = None
 
 SLOTS_PER_FLOOR = 20
-FLOORS = (1, 2, 3)
-OPEN_FLOORS = {1, 2}  # lantai 3 ditutup (sesuai temuan lantai atas sering ditutup)
+FLOORS = (1, 2)
+OPEN_FLOORS = {1}  # lantai 2 (lantai atas) ditutup secara default, sesuai temuan D1; skenario bisa membukanya
 VALID_CARDS = ("RFID-04A1B7C2", "RFID-0B22C3D4", "RFID-1F33E5A6")
 
 SCHEMA = """

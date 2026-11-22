@@ -34,8 +34,7 @@ def stub_occupancy():
     return {
         "floors": [
             {"floorNumber": 1, "isOpen": True, "total": 20, "available": 3, "occupied": 16, "unknown": 1},
-            {"floorNumber": 2, "isOpen": True, "total": 20, "available": 14, "occupied": 6, "unknown": 0},
-            {"floorNumber": 3, "isOpen": False, "total": 20, "available": 20, "occupied": 0, "unknown": 0},
+            {"floorNumber": 2, "isOpen": False, "total": 20, "available": 20, "occupied": 0, "unknown": 0},
         ],
         "generatedAt": iso(now()),
     }
@@ -62,5 +61,5 @@ def stub_prediction(fromHour: int = 6, toHour: int = 9):
             {"hour": h, "floorNumber": 1, "predictedOccupancyPercent": min(100.0, 30.0 + 20 * (h - fromHour))}
             for h in range(fromHour, toHour + 1)
         ],
-        "advisory": "Data dummy (stub): pertimbangkan membuka lantai 3 lebih awal.",
+        "advisory": "Data dummy (stub): pertimbangkan membuka lantai 2 lebih awal.",
     }
