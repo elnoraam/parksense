@@ -40,7 +40,9 @@ app.include_router(api)
 
 @app.get("/health", tags=["meta"])
 def health():
-    return {"status": "ok"}
+    from . import ai_adapter
+
+    return {"status": "ok", "ai": ai_adapter.USING}
 
 
 @app.get("/", include_in_schema=False)
