@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 @'
+=======
+>>>>>>> origin/main
 # ParkSense — Prototipe Deliverable 3 (II3120, Kelompok 05)
 
 Layanan parkir cerdas IoT + AI untuk gedung parkir motor ITB Jatinangor. Seluruh prototipe berjalan virtual di laptop.
@@ -31,10 +34,18 @@ curl "$B/ai/predictions/occupancy?fromHour=6&toHour=9" -H "$TOKEN"
 
 ## Tes
 ```bash
+<<<<<<< HEAD
 python -m pytest            # 13 tes: TC-01 s.d. TC-09 + kasus galat
+=======
+python -m pytest            # 12 tes: TC-01 s.d. TC-09 + kasus galat
+>>>>>>> origin/main
 python -m backend.export_openapi   # menulis docs/openapi.json
 ```
 
 ## Struktur
+<<<<<<< HEAD
 `backend/` (18224125 Rachel Elnora Mannuelle Sidanta) · `ai/` (18224015 Salma Az Zahra) · `simulator/` (18224097 Lukman Hakim Syah Ardhana) · `web/gate/` (18224051 Belva Charissa Putri Have) · `web/dashboard/` (18224075 Sherry Eunike) · `tests/` dan `docs/` (18224037 Indah Ramadhani, semua).
 '@ | Set-Content README.md -Encoding utf8
+=======
+`backend/` (Ellen) · `ai/` (Salma) · `simulator/` (Lukman) · `web/gate/` (Belva) · `web/dashboard/` (Sherry) · `tests/` dan `docs/` (Indah, semua).
+>>>>>>> origin/main
