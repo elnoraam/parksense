@@ -8,7 +8,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import db, errors
-from .routes import gate, occupancy, slots, stub
+from .routes import dev, gate, occupancy, predictions, slots, stub
 
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 
@@ -35,6 +35,8 @@ api = APIRouter(prefix="/api/v1")
 api.include_router(gate.router)
 api.include_router(occupancy.router)
 api.include_router(slots.router)
+api.include_router(predictions.router)
+api.include_router(dev.router)
 api.include_router(stub.router)
 app.include_router(api)
 
