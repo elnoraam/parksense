@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ParkSense — Dashboard Pengelola</title>
+<style>
+  :root {
+    --pink: #e8457a; --pink-soft: #fde4ec;
+    --blue: #1f4e8c; --blue-soft: #e3edf9;
+    --bg: #f6f8fc; --text: #1b2333; --muted: #5b6375;
+    --ok: #15803d; --ok-soft: #dcfce7;
+    --warn: #f59e0b; --danger: #dc2626; --danger-soft: #fee2e2;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", system-ui, sans-serif; background: var(--bg);
+         color: var(--text); font-size: 18px; }
+
+  /* Header */
+  header { background: linear-gradient(90deg, var(--blue), var(--pink)); color: #fff;
+           padding: 16px 28px; display: flex; justify-content: space-between; align-items: center;
+           flex-wrap: wrap; gap: 12px; }
+  header h1 { margin: 0; font-size: 30px; }
+  header p { margin: 4px 0 0; font-size: 17px; opacity: .92; }
+  .status { text-align: right; }
+  #conn { display: inline-block; font-size: 17px; font-weight: 700; padding: 6px 14px;
+          border-radius: 999px; background: rgba(255,255,255,.22); }
+  #conn.online { background: #fff; color: var(--ok); }
+  #conn.offline { background: #fff; color: var(--danger); }
+  #updated { margin-top: 6px; font-size: 16px; }
+
+  /* Banner galat global (401 / backend mati) */
+  #banner { display: none; background: var(--danger-soft); color: var(--danger); border: 2px solid var(--danger);
+            border-radius: 12px; padding: 12px 18px; font-size: 20px; font-weight: 700; }
+  #banner.show { display: block; }
+  #mockNote { display: none; background: #fef3c7; color: #92400e; border-radius: 12px;
+              padding: 10px 18px; font-weight: 600; }
+  #mockNote.show { display: block; }
+
+  main { max-width: 1280px; margin: 0 auto; padding: 22px; display: grid; gap: 22px; }
+  .card { background: #fff; border-radius: 14px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+  h2 { margin: 0 0 14px; font-size: 23px; color: var(--blue); }
+  .muted { color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>ParkSense — Dashboard Pengelola</h1>
+    <p>Gedung parkir motor ITB Jatinangor</p>
+  </div>
+  <div class="status">
+    <span id="conn">Menghubungkan…</span>
+    <div id="updated">Terakhir diperbarui: –</div>
+  </div>
+</header>
+
+<main>
+  <div id="banner"></div>
+  <div id="mockNote">Mode data tiruan (USE_MOCK = true): data bukan dari backend.</div>
+
+  <!-- B. Okupansi per lantai -->
+  <section class="card">
+    <h2>Okupansi per Lantai</h2>
+    <div id="floors" class="muted">Memuat data lantai…</div>
+  </section>
+
+  <!-- C. Prediksi okupansi -->
+  <section class="card">
+    <h2>Prediksi Okupansi per Jam</h2>
+    <div id="prediction" class="muted">Memuat prediksi…</div>
+  </section>
+
+  <!-- D. Peringatan sensor -->
+  <section class="card">
+    <h2>Peringatan Sensor</h2>
+    <div id="alerts" class="muted">Memuat data sensor…</div>
+  </section>
+</main>
+
+<script>
+// ===== Konfigurasi: satu-satunya tempat URL, token, dan interval =====
+// Bila dibuka lewat backend (http://localhost:8000/web/dashboard/) pakai origin yang sama;
+// bila dibuka langsung sebagai file, pakai localhost:8000.
+const API_BASE = location.protocol.startsWith("http")
+  ? location.origin + "/api/v1"
+  : "http://localhost:8000/api/v1";
+const DASHBOARD_TOKEN = "dev-dashboard-token";
+const REFRESH_MS = 3000;
+const USE_MOCK = false; // true = data tiruan persis bentuk respons FINAL kontrak (Bagian 4)
+
+const $ = (id) => document.getElementById(id);
+
+// ===== Pemanggil API =====
+// Selalu mengirim Bearer token. Hasil: {ok, status, data, error}.
+// error berisi body galat backend {status, code, message}; status 0 = backend tidak terjangkau.
+async function apiGet(path) {
+  if (USE_MOCK) return mockGet(path);
+  try {
+    const res = await fetch(API_BASE + path, {
+      headers: { Authorization: `Bearer ${DASHBOARD_TOKEN}` },
+    });
+    let body = null;
+    try { body = await res.json(); } catch { /* respons tanpa JSON */ }
+    if (res.ok) return { ok: true, status: res.status, data: body, error: null };
+    const error = body && body.code
+      ? body
+      : { status: res.status, code: "HTTP_" + res.status, message: "Respons galat dari backend" };
+    return { ok: false, status: res.status, data: null, error };
+  } catch {
+    return { ok: false, status: 0, data: null,
+             error: { status: 0, code: "NETWORK_ERROR", message: "Backend tidak terhubung" } };
+  }
+}
+
+// ===== Data tiruan (USE_MOCK) — bentuk persis respons FINAL kontrak =====
+function mockNowIso() {
+  // waktu sekarang dalam ISO 8601 zona +07:00
+  return new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 19) + "+07:00";
+}
+
+function mockGet(path) {
+  const url = new URL(path, "http://mock");
+  if (url.pathname === "/occupancy/floors") {
+    return { ok: true, status: 200, error: null, data: {
+      floors: [
+        { floorNumber: 1, isOpen: true, total: 20, available: 1, occupied: 17, unknown: 2 },
+        { floorNumber: 2, isOpen: false, total: 20, available: 20, occupied: 0, unknown: 0 },
+      ],
+      generatedAt: mockNowIso(),
+    } };
+  }
+  if (url.pathname === "/slots") {
+    const slots = [];
+    for (let fl = 1; fl <= 2; fl++) {
+      for (let n = 1; n <= 20; n++) {
+        const slotId = `F${fl}-A${String(n).padStart(2, "0")}`;
+        let status = "AVAILABLE", ledColor = "GREEN", lastUpdate = null;
+        if (fl === 1 && (n === 5 || n === 6)) { status = "UNKNOWN"; ledColor = "OFF"; lastUpdate = "2026-11-24T07:31:12+07:00"; }
+        else if (fl === 1 && n <= 19) { status = "OCCUPIED"; ledColor = "RED"; lastUpdate = mockNowIso(); }
+        slots.push({ slotId, floorNumber: fl, status, ledColor, lastUpdate });
+      }
+    }
+    return { ok: true, status: 200, error: null, data: { slots, generatedAt: mockNowIso() } };
+  }
+  if (url.pathname === "/ai/predictions/occupancy") {
+    const fromHour = Number(url.searchParams.get("fromHour"));
+    const toHour = Number(url.searchParams.get("toHour"));
+    if (!(Number.isInteger(fromHour) && Number.isInteger(toHour) && 0 <= fromHour && fromHour < toHour && toHour <= 23)) {
+      return { ok: false, status: 400, data: null, error: { status: 400, code: "INVALID_TIME_WINDOW",
+        message: "fromHour harus lebih kecil dari toHour dan berada di rentang 0-23" } };
+    }
+    const curve1 = [5, 4, 4, 4, 5, 6, 20, 70, 95, 98, 97, 90, 82, 78, 72, 65, 55, 40, 28, 18, 12, 9, 7, 6];
+    const predictions = [];
+    for (let h = fromHour; h <= toHour; h++) {
+      predictions.push({ hour: h, floorNumber: 1, predictedOccupancyPercent: curve1[h] });
+      predictions.push({ hour: h, floorNumber: 2, predictedOccupancyPercent: Math.max(0, (curve1[h] - 80) * 2.5) });
+    }
+    return { ok: true, status: 200, error: null, data: { fromHour, toHour, predictions,
+      advisory: "Lantai 1 diperkirakan terisi 95% pada pukul 08.00. Disarankan membuka lantai 2 lebih awal." } };
+  }
+  return { ok: false, status: 404, data: null, error: { status: 404, code: "NOT_FOUND", message: "Path tiruan tidak dikenal" } };
+}
+
+// ===== Header: indikator koneksi + waktu pembaruan =====
+// "HH:MM:SS WIB" dari generatedAt (ISO +07:00)
+function formatWib(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return "–";
+  return d.toLocaleTimeString("en-GB", { timeZone: "Asia/Jakarta", hour12: false }) + " WIB";
+}
+
+function setConnection(online) {
+  $("conn").textContent = online ? "● Terhubung" : "○ Backend tidak terhubung";
+  $("conn").className = online ? "online" : "offline";
+}
+
+function setUpdated(generatedAt) {
+  $("updated").textContent = "Terakhir diperbarui: " + formatWib(generatedAt);
+}
+
+// Tahap 1: satu kali cek koneksi saat halaman dibuka (refresh berkala menyusul).
+async function checkConnection() {
+  const res = await apiGet("/occupancy/floors");
+  setConnection(res.status !== 0);
+  if (res.ok) setUpdated(res.data.generatedAt);
+}
+
+if (USE_MOCK) $("mockNote").classList.add("show");
+checkConnection();
+</script>
+</body>
+</html>
