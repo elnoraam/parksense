@@ -89,6 +89,15 @@ def test_ok_reading():
     assert detect_anomaly(120, NOW - timedelta(seconds=60), NOW) == "OK"  # tepat di batas
 
 
+def test_reading_as_dict_from_backend():
+    # bentuk laporan sensor yang dikirim backend (PUT /slots/{id}/status)
+    ok = {"rawSensorValue": 18.4, "unit": "cm", "status": "OCCUPIED"}
+    far = {"rawSensorValue": 500.0, "unit": "cm", "status": "OCCUPIED"}
+    assert detect_anomaly(ok, NOW, NOW) == "OK"
+    assert detect_anomaly(far, NOW, NOW) == "OUT_OF_RANGE"
+    assert detect_anomaly(ok, NOW - timedelta(seconds=90), NOW) == "STALE"
+
+
 def test_status_from_distance():
     assert status_from_distance(15) == "OCCUPIED"
     assert status_from_distance(29.9) == "OCCUPIED"
