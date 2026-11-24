@@ -1,5 +1,5 @@
 ParkSense — bukti uji skenario demo pada dashboard (peak_hour, all_full, reset) + otorisasi
-Dibuat      : 2026-11-24T21:24:05+07:00
+Dibuat      : 2026-11-24T21:58:50+07:00
 Backend     : python -m uvicorn backend.main:app --reload --port 8000
 Dashboard   : http://localhost:8000/web/dashboard/index.html
 GET /health : {"status":"ok","ai":{"recommend_slot":"fallback","predict_occupancy":"fallback","make_advisory":"fallback","detect_anomaly":"fallback","status_from_distance":"fallback","load_history":"fallback"}}
@@ -7,7 +7,7 @@ Catatan     : 'Tampilan dashboard' = hasil menjalankan <script> web/dashboard/in
               terhadap backend yang sama (DOM tiruan di Node), bukan tangkapan layar.
 ==================================================================
 
---- [2026-11-24T21:24:05+07:00] Muat skenario peak_hour
+--- [2026-11-24T21:58:50+07:00] Muat skenario peak_hour
 $ curl.exe -s -X POST -H "X-Device-Key: parksense-dev-key" "http://localhost:8000/api/v1/dev/scenario/peak_hour"
 HTTP 200
 {
@@ -15,7 +15,7 @@ HTTP 200
   "applied": true
 }
 
---- [2026-11-24T21:24:06+07:00] GET /occupancy/floors (peak_hour)
+--- [2026-11-24T21:58:50+07:00] GET /occupancy/floors (peak_hour)
 $ curl.exe -s -X GET -H "Authorization: Bearer dev-dashboard-token" "http://localhost:8000/api/v1/occupancy/floors"
 HTTP 200
 {
@@ -37,19 +37,20 @@ HTTP 200
       "unknown": 0
     }
   ],
-  "generatedAt": "2026-11-24T21:24:06+07:00"
+  "generatedAt": "2026-11-24T21:58:51+07:00"
 }
 
---- [2026-11-24T21:24:06+07:00] Tampilan dashboard: peak_hour
+--- [2026-11-24T21:58:51+07:00] Tampilan dashboard: peak_hour
 Koneksi       : ● Terhubung
-Diperbarui    : Terakhir diperbarui: 21:24:07 WIB
+Diperbarui    : Terakhir diperbarui: 21:58:51 WIB
 Banner        : (tidak ada)
-Okupansi      : 40 total slot 17 kosong 23 terisi 0 tidak diketahui Lantai 1 DIBUKA 95% terisi (19/20) 1 kosong 19 terisi 0 tidak diketahui Lantai 2 DIBUKA 20% terisi (4/20) 16 kosong 4 terisi 0 tidak diketahui
+Ringkasan     : Slot kosong 17 dari 40 slot Semua lantai Slot terisi 23 dari 40 slot Semua lantai Tidak diketahui 0 sensor bermasalah Terpisah Lantai dibuka 2/2 lantai beroperasi Status lantai
+Kartu lantai  : Lantai 1 DIBUKA 95% terisi Kosong 1/20 Terisi 19/20 Tidak diketahui 0/20 Lantai 2 DIBUKA 20% terisi Kosong 16/20 Terisi 4/20 Tidak diketahui 0/20
 Lantai DITUTUP: tidak ada
 Badge sensor  : 0
-Peringatan    : ✔ Semua sensor normal
+Peringatan    : ✓ Semua sensor normal · tidak ada slot berstatus UNKNOWN
 
---- [2026-11-24T21:24:07+07:00] Muat skenario all_full
+--- [2026-11-24T21:58:52+07:00] Muat skenario all_full
 $ curl.exe -s -X POST -H "X-Device-Key: parksense-dev-key" "http://localhost:8000/api/v1/dev/scenario/all_full"
 HTTP 200
 {
@@ -57,7 +58,7 @@ HTTP 200
   "applied": true
 }
 
---- [2026-11-24T21:24:08+07:00] GET /occupancy/floors (all_full)
+--- [2026-11-24T21:58:53+07:00] GET /occupancy/floors (all_full)
 $ curl.exe -s -X GET -H "Authorization: Bearer dev-dashboard-token" "http://localhost:8000/api/v1/occupancy/floors"
 HTTP 200
 {
@@ -79,19 +80,20 @@ HTTP 200
       "unknown": 0
     }
   ],
-  "generatedAt": "2026-11-24T21:24:08+07:00"
+  "generatedAt": "2026-11-24T21:58:53+07:00"
 }
 
---- [2026-11-24T21:24:09+07:00] Tampilan dashboard: all_full
+--- [2026-11-24T21:58:53+07:00] Tampilan dashboard: all_full
 Koneksi       : ● Terhubung
-Diperbarui    : Terakhir diperbarui: 21:24:09 WIB
+Diperbarui    : Terakhir diperbarui: 21:58:53 WIB
 Banner        : (tidak ada)
-Okupansi      : 40 total slot 0 kosong 40 terisi 0 tidak diketahui Lantai 1 DIBUKA 100% terisi (20/20) 0 kosong 20 terisi 0 tidak diketahui Lantai 2 DIBUKA 100% terisi (20/20) 0 kosong 20 terisi 0 tidak diketahui
+Ringkasan     : Slot kosong 0 dari 40 slot Semua lantai Slot terisi 40 dari 40 slot Semua lantai Tidak diketahui 0 sensor bermasalah Terpisah Lantai dibuka 2/2 lantai beroperasi Status lantai
+Kartu lantai  : Lantai 1 DIBUKA 100% terisi Kosong 0/20 Terisi 20/20 Tidak diketahui 0/20 Lantai 2 DIBUKA 100% terisi Kosong 0/20 Terisi 20/20 Tidak diketahui 0/20
 Lantai DITUTUP: tidak ada
 Badge sensor  : 0
-Peringatan    : ✔ Semua sensor normal
+Peringatan    : ✓ Semua sensor normal · tidak ada slot berstatus UNKNOWN
 
---- [2026-11-24T21:24:10+07:00] Muat skenario reset
+--- [2026-11-24T21:58:54+07:00] Muat skenario reset
 $ curl.exe -s -X POST -H "X-Device-Key: parksense-dev-key" "http://localhost:8000/api/v1/dev/scenario/reset"
 HTTP 200
 {
@@ -99,7 +101,7 @@ HTTP 200
   "applied": true
 }
 
---- [2026-11-24T21:24:10+07:00] GET /occupancy/floors (reset)
+--- [2026-11-24T21:58:55+07:00] GET /occupancy/floors (reset)
 $ curl.exe -s -X GET -H "Authorization: Bearer dev-dashboard-token" "http://localhost:8000/api/v1/occupancy/floors"
 HTTP 200
 {
@@ -121,19 +123,20 @@ HTTP 200
       "unknown": 0
     }
   ],
-  "generatedAt": "2026-11-24T21:24:10+07:00"
+  "generatedAt": "2026-11-24T21:58:55+07:00"
 }
 
---- [2026-11-24T21:24:11+07:00] Tampilan dashboard: reset
+--- [2026-11-24T21:58:55+07:00] Tampilan dashboard: reset
 Koneksi       : ● Terhubung
-Diperbarui    : Terakhir diperbarui: 21:24:11 WIB
+Diperbarui    : Terakhir diperbarui: 21:58:56 WIB
 Banner        : (tidak ada)
-Okupansi      : 40 total slot 40 kosong 0 terisi 0 tidak diketahui Lantai 1 DIBUKA 0% terisi (0/20) 20 kosong 0 terisi 0 tidak diketahui Lantai 2 DITUTUP 0% terisi (0/20) 20 kosong 0 terisi 0 tidak diketahui
+Ringkasan     : Slot kosong 40 dari 40 slot Semua lantai Slot terisi 0 dari 40 slot Semua lantai Tidak diketahui 0 sensor bermasalah Terpisah Lantai dibuka 1/2 lantai beroperasi Status lantai
+Kartu lantai  : Lantai 1 DIBUKA 0% terisi Kosong 20/20 Terisi 0/20 Tidak diketahui 0/20 Lantai 2 DITUTUP 0% terisi Kosong 20/20 Terisi 0/20 Tidak diketahui 0/20
 Lantai DITUTUP: ya (kartu redup)
 Badge sensor  : 0
-Peringatan    : ✔ Semua sensor normal
+Peringatan    : ✓ Semua sensor normal · tidak ada slot berstatus UNKNOWN
 
---- [2026-11-24T21:24:12+07:00] Otorisasi: token dashboard salah
+--- [2026-11-24T21:58:57+07:00] Otorisasi: token dashboard salah
 $ curl.exe -s -X GET -H "Authorization: Bearer token-salah" "http://localhost:8000/api/v1/occupancy/floors"
 HTTP 401
 {
@@ -142,6 +145,6 @@ HTTP 401
   "message": "Butuh X-Device-Key atau Bearer token yang valid"
 }
 
---- [2026-11-24T21:24:12+07:00] Tampilan dashboard: DASHBOARD_TOKEN salah
+--- [2026-11-24T21:58:57+07:00] Tampilan dashboard: DASHBOARD_TOKEN salah
 Banner : Token dashboard tidak valid (401)
 

@@ -1,5 +1,5 @@
 ParkSense — bukti uji TC-06 (sisi tampilan): prediksi jam puncak + galat INVALID_TIME_WINDOW
-Dibuat      : 2026-11-24T21:24:01+07:00
+Dibuat      : 2026-11-24T21:58:46+07:00
 Backend     : python -m uvicorn backend.main:app --reload --port 8000
 Dashboard   : http://localhost:8000/web/dashboard/index.html
 GET /health : {"status":"ok","ai":{"recommend_slot":"fallback","predict_occupancy":"fallback","make_advisory":"fallback","detect_anomaly":"fallback","status_from_distance":"fallback","load_history":"fallback"}}
@@ -7,7 +7,7 @@ Catatan     : 'Tampilan dashboard' = hasil menjalankan <script> web/dashboard/in
               terhadap backend yang sama (DOM tiruan di Node), bukan tangkapan layar.
 ==================================================================
 
---- [2026-11-24T21:24:02+07:00] Kondisi awal: reset (lantai 2 tertutup)
+--- [2026-11-24T21:58:47+07:00] Kondisi awal: reset (lantai 2 tertutup)
 $ curl.exe -s -X POST -H "X-Device-Key: parksense-dev-key" "http://localhost:8000/api/v1/dev/scenario/reset"
 HTTP 200
 {
@@ -15,7 +15,7 @@ HTTP 200
   "applied": true
 }
 
---- [2026-11-24T21:24:02+07:00] Prediksi fromHour=6&toHour=9
+--- [2026-11-24T21:58:47+07:00] Prediksi fromHour=6&toHour=9
 $ curl.exe -s -X GET -H "Authorization: Bearer dev-dashboard-token" "http://localhost:8000/api/v1/ai/predictions/occupancy?fromHour=6&toHour=9"
 HTTP 200
 {
@@ -66,7 +66,7 @@ HTTP 200
   "advisory": "Lantai 1 diperkirakan penuh sekitar pukul 09.00 (95%). Pertimbangkan membuka lantai 2 lebih awal."
 }
 
---- [2026-11-24T21:24:03+07:00] Rentang salah fromHour=9&toHour=6
+--- [2026-11-24T21:58:48+07:00] Rentang salah fromHour=9&toHour=6
 $ curl.exe -s -X GET -H "Authorization: Bearer dev-dashboard-token" "http://localhost:8000/api/v1/ai/predictions/occupancy?fromHour=9&toHour=6"
 HTTP 400
 {
@@ -75,7 +75,7 @@ HTTP 400
   "message": "fromHour harus lebih kecil dari toHour dan berada di rentang 0-23"
 }
 
---- [2026-11-24T21:24:04+07:00] Tampilan dashboard: grafik prediksi
+--- [2026-11-24T21:58:48+07:00] Tampilan dashboard: grafik prediksi
 [Halaman dibuka, input 6..9]
   Status      : Prediksi 06:00–09:00 (rentang inklusif)
   Kotak galat : (tidak tampil)
@@ -88,7 +88,7 @@ HTTP 400
 [Input 9..6, tombol Tampilkan Prediksi]
   Status      : (kosong)
   Kotak galat : Galat 400 INVALID_TIME_WINDOW | fromHour harus lebih kecil dari toHour dan berada di rentang 0-23
-  Keterangan  : Grafik dan Saran AI di bawah adalah hasil sebelumnya (06:00–09:00).
+  Keterangan  : Grafik dan Saran AI adalah hasil sebelumnya (06:00–09:00).
   Grafik      : dibuat 1 kali, dihancurkan 0 kali; sumbu X = 06:00, 07:00, 08:00, 09:00
      Lantai 1 = [28.8,61,87.2,95.1]
      Lantai 2 = [0,14.7,45.7,52.9]
