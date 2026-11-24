@@ -89,6 +89,23 @@
   #advisory { margin-top: 16px; background: var(--blue-soft); border-left: 6px solid var(--blue);
               border-radius: 10px; padding: 14px 18px; font-size: 20px; }
   #advisory b { color: var(--blue); }
+
+  /* D. Peringatan sensor */
+  .alert-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .alert-head h2 { margin: 0; }
+  #alertCount { font-size: 18px; font-weight: 800; padding: 4px 14px; border-radius: 999px; }
+  #alertCount.has { background: var(--danger); color: #fff; }
+  #alertCount.none { background: var(--ok-soft); color: var(--ok); }
+  .all-ok { background: var(--ok-soft); color: var(--ok); border-radius: 12px; padding: 14px 18px;
+            font-size: 20px; font-weight: 700; }
+  .alert-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .alert-list li { display: grid; grid-template-columns: 130px 110px 1fr; gap: 12px; align-items: center;
+                   border-left: 6px solid var(--danger); background: #fff7f7; border-radius: 10px; padding: 12px 16px; }
+  .alert-list .sid { font-size: 24px; font-weight: 800; }
+  .alert-list .why { color: var(--danger); font-weight: 600; }
+  .alert-list li.new { animation: flash 1.2s ease-in-out 3; }
+  @keyframes flash { 50% { background: #fecaca; box-shadow: 0 0 0 4px var(--danger); } }
+  @media (max-width: 700px) { .alert-list li { grid-template-columns: 1fr; gap: 2px; } }
 </style>
 </head>
 <body>
@@ -130,7 +147,10 @@
 
   <!-- D. Peringatan sensor -->
   <section class="card">
-    <h2>Peringatan Sensor</h2>
+    <div class="alert-head">
+      <h2>Peringatan Sensor</h2>
+      <span id="alertCount"></span>
+    </div>
     <div id="alerts" class="muted">Memuat data sensor…</div>
   </section>
 </main>
@@ -411,19 +431,68 @@ if (typeof Chart !== "undefined") {
 }
 $("predBtn").addEventListener("click", loadPrediction);
 
-// ===== Refresh berkala (tiap REFRESH_MS) =====
+// ===== D. Peringatan sensor (slot UNKNOWN dari GET /slots) =====
+let knownAlerts = null; // slotId UNKNOWN pada siklus sebelumnya (null = belum pernah dimuat)
+
+function renderAlerts(slots) {
+  const unknown = slots
+    .filter((s) => s.status === "UNKNOWN")
+    .sort((a, b) => a.floorNumber - b.floorNumber || a.slotId.localeCompare(b.slotId));
+
+  $("alertCount").textContent = unknown.length ? `${unknown.length} peringatan` : "0";
+  $("alertCount").className = unknown.length ? "has" : "none";
+
+  if (unknown.length === 0) {
+    $("alerts").className = "";
+    $("alerts").innerHTML = `<div class="all-ok">✔ Semua sensor normal</div>`;
+  } else {
+    const rows = unknown.map((s) => {
+      // Sorot singkat slot yang baru muncul (tidak saat pemuatan pertama)
+      const isNew = knownAlerts !== null && !knownAlerts.has(s.slotId);
+      const last = s.lastUpdate ? "laporan terakhir " + formatWib(s.lastUpdate) : "belum pernah melapor";
+      return `
+        <li class="${isNew ? "new" : ""}">
+          <span class="sid">${s.slotId}</span>
+          <span>Lantai ${s.floorNumber}</span>
+          <span><span class="why">LED OFF, dikeluarkan dari rekomendasi</span><br>
+                <span class="muted">${last}</span></span>
+        </li>`;
+    }).join("");
+    $("alerts").className = "";
+    $("alerts").innerHTML = `<ul class="alert-list">${rows}</ul>`;
+  }
+  knownAlerts = new Set(unknown.map((s) => s.slotId));
+}
+
+// ===== Banner galat global =====
+function setBanner(text) {
+  $("banner").textContent = text || "";
+  $("banner").classList.toggle("show", Boolean(text));
+}
+
+// Pilih pesan banner dari hasil-hasil apiGet (null = tidak ada masalah)
+function bannerMessage(results) {
+  if (results.some((r) => r.status === 0)) return "Backend tidak terhubung — data terakhir tetap ditampilkan, mencoba lagi otomatis…";
+  if (results.some((r) => r.status === 401)) return "Token dashboard tidak valid (401)";
+  const failed = results.find((r) => !r.ok);
+  return failed ? `Galat ${failed.status} ${failed.error.code}: ${failed.error.message}` : null;
+}
+
+// ===== Refresh berkala (tiap REFRESH_MS): okupansi (B) + peringatan sensor (D) =====
 let refreshing = false; // penjaga: siklus baru tidak dimulai sebelum yang lama selesai
 
 async function refreshLive() {
   if (refreshing) return;
   refreshing = true;
   try {
-    const res = await apiGet("/occupancy/floors");
-    setConnection(res.status !== 0);
-    if (res.ok) {
-      renderFloors(res.data.floors);
-      setUpdated(res.data.generatedAt);
+    const [floorsRes, slotsRes] = await Promise.all([apiGet("/occupancy/floors"), apiGet("/slots")]);
+    setConnection(floorsRes.status !== 0 && slotsRes.status !== 0);
+    setBanner(bannerMessage([floorsRes, slotsRes]));
+    if (floorsRes.ok) {
+      renderFloors(floorsRes.data.floors);
+      setUpdated(floorsRes.data.generatedAt);
     }
+    if (slotsRes.ok) renderAlerts(slotsRes.data.slots);
     // Bila gagal, data terakhir tetap tampil; dicoba lagi di siklus berikutnya.
   } catch (err) {
     console.error(err); // jangan sampai halaman berhenti karena satu galat
