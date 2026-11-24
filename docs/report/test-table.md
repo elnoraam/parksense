@@ -1,7 +1,7 @@
 # Tabel Pengujian Prototipe ParkSense (Deliverable 3)
 
 Kolom **Hasil Aktual**, **Status**, dan **Bukti** diisi setelah TC dijalankan.
-Bukti disimpan di `tests/evidence/`.
+Bukti disimpan di `tests/evidence/` (nama berkas ditulis di kolom Bukti).
 
 | ID | Skenario | Langkah / Input | Hasil Diharapkan | Hasil Aktual | Status (Lulus/Gagal) | Bukti |
 |---|---|---|---|---|---|---|
