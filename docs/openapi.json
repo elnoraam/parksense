@@ -14,33 +14,15 @@
         "summary": "Entry Tap",
         "description": "Validasi kartu, catat masuk, minta rekomendasi lantai dan slot, lalu buka palang.",
         "operationId": "entry_tap_api_v1_gate_entry_tap_post",
-        "parameters": [
-          {
-            "name": "x-device-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Device-Key"
-            }
-          }
-        ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/EntryTap"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
@@ -61,7 +43,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "DeviceKey": []
+          }
+        ]
       }
     },
     "/api/v1/occupancy/floors": {
@@ -72,40 +59,6 @@
         "summary": "Get Occupancy Floors",
         "description": "Ketersediaan slot per lantai (UNKNOWN dihitung terpisah dari available).",
         "operationId": "get_occupancy_floors_api_v1_occupancy_floors_get",
-        "parameters": [
-          {
-            "name": "x-device-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Device-Key"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -114,18 +67,16 @@
                 "schema": {}
               }
             }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
           }
-        }
+        },
+        "security": [
+          {
+            "DeviceKey": []
+          },
+          {
+            "DashboardBearer": []
+          }
+        ]
       }
     },
     "/api/v1/slots/{slot_id}/status": {
@@ -136,6 +87,11 @@
         "summary": "Update Slot Status",
         "description": "Gateway IoT melaporkan status slot; platform memperbarui status dan memicu LED.",
         "operationId": "update_slot_status_api_v1_slots__slot_id__status_put",
+        "security": [
+          {
+            "DeviceKey": []
+          }
+        ],
         "parameters": [
           {
             "name": "slot_id",
@@ -144,22 +100,6 @@
             "schema": {
               "type": "string",
               "title": "Slot Id"
-            }
-          },
-          {
-            "name": "x-device-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Device-Key"
             }
           }
         ],
@@ -203,40 +143,6 @@
         "summary": "List Slots",
         "description": "Pendukung (di luar spesifikasi 2.3): semua slot beserta warna LED, untuk peta slot.",
         "operationId": "list_slots_api_v1_slots_get",
-        "parameters": [
-          {
-            "name": "x-device-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Device-Key"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -245,18 +151,16 @@
                 "schema": {}
               }
             }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
           }
-        }
+        },
+        "security": [
+          {
+            "DeviceKey": []
+          },
+          {
+            "DashboardBearer": []
+          }
+        ]
       }
     },
     "/api/v1/ai/predictions/occupancy": {
@@ -267,6 +171,11 @@
         "summary": "Get Occupancy Prediction",
         "description": "Prediksi okupansi per jam per lantai pada rentang jam (inklusif) beserta advisory.",
         "operationId": "get_occupancy_prediction_api_v1_ai_predictions_occupancy_get",
+        "security": [
+          {
+            "DashboardBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "fromHour",
@@ -284,22 +193,6 @@
             "schema": {
               "type": "integer",
               "title": "Tohour"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
             }
           }
         ],
@@ -333,6 +226,11 @@
         "summary": "Load Scenario",
         "description": "reset | peak_hour (lantai 1 hampir penuh, lantai 2 dibuka) | all_full | sensor_stale.",
         "operationId": "load_scenario_api_v1_dev_scenario__name__post",
+        "security": [
+          {
+            "DeviceKey": []
+          }
+        ],
         "parameters": [
           {
             "name": "name",
@@ -341,22 +239,6 @@
             "schema": {
               "type": "string",
               "title": "Name"
-            }
-          },
-          {
-            "name": "x-device-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Device-Key"
             }
           }
         ],
@@ -390,6 +272,11 @@
         "summary": "Set Recommendation Fault",
         "description": "Paksa modul rekomendasi gagal (untuk TC-09). enabled=false untuk memulihkan.",
         "operationId": "set_recommendation_fault_api_v1_dev_fault_recommendation_post",
+        "security": [
+          {
+            "DeviceKey": []
+          }
+        ],
         "parameters": [
           {
             "name": "enabled",
@@ -399,22 +286,6 @@
               "type": "boolean",
               "default": true,
               "title": "Enabled"
-            }
-          },
-          {
-            "name": "x-device-key",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Device-Key"
             }
           }
         ],
@@ -580,6 +451,17 @@
           "type"
         ],
         "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "DeviceKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Device-Key"
+      },
+      "DashboardBearer": {
+        "type": "http",
+        "scheme": "bearer"
       }
     }
   }
