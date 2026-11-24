@@ -401,3 +401,84 @@ Galat ditampilkan tanpa menghapus data terakhir. Rentang jam yang salah memuncul
 **[Sisipkan Gambar 3.7.5: tests/evidence/dashboard/tc06_invalid_window.png]**
 
 Gambar 3.7.5 Pesan galat INVALID_TIME_WINDOW pada Dashboard Pengelola
+
+## 3.8 Keterkaitan dengan BPMN To-Be dan SoaML
+
+Setiap aktivitas BPMN To-Be pada Gambar 2.1.2 dan 2.1.3 dipetakan ke komponen prototipe, *endpoint*, operasi layanan pada rancangan SoaML, dan masalah yang dijawabnya. Kolom realisasi menunjukkan apakah aktivitas diwujudkan penuh, sebagian, atau berada di luar lingkup prototipe. Tabel 3.8.1 memuat aktivitas pada diagram utama.
+
+Tabel 3.8.1 Pemetaan aktivitas BPMN To-Be ke prototipe dan SoaML
+
+| Pool / lane | Aktivitas BPMN To-Be | Komponen dan endpoint | Operasi SoaML | Masalah | Realisasi |
+|---|---|---|---|---|---|
+| Pengemudi | Tap kartu di pembaca | Smart Gate, isian `cardId` | — (aktivitas pengemudi) | P1 | Penuh, pembaca kartu disimulasikan |
+| Pengemudi | Lihat informasi di layar gerbang | Smart Gate, layar gerbang | — (aktivitas pengemudi) | P1 | Penuh |
+| Pengemudi | Menuju slot ikuti lampu LED | LED virtual pada peta slot dan panel simulator | — (aktivitas pengemudi) | P2 | Penuh, LED disimulasikan |
+| Pengemudi | Slot terisi: pilih slot lain ber-LED hijau | LED virtual hijau dan merah | — (aktivitas pengemudi) | P2 | Penuh, LED disimulasikan |
+| Pengemudi | Cari slot LED hijau sesuai info per lantai / arahan petugas | Smart Gate, ketersediaan per lantai | — (aktivitas pengemudi) | P1 | Penuh |
+| Pengemudi | Tap & bayar keluar; Keluar setelah palang terbuka | — | — (aktivitas pengemudi) | — | Di luar lingkup prototipe |
+| Gerbang Pintar | Baca kartu & minta rekomendasi | Smart Gate, `POST /gate/entry-tap` | `AccessService.validateUserCard()`, `RecommendationService.requestRecommendation()` | P1 | Penuh |
+| Gerbang Pintar | Buka palang, siapkan info lantai & slot; Tampilkan di layar gerbang | Smart Gate, respons `entry-tap` dan `GET /occupancy/floors` | `RecommendationService.recommendationReady()`, `OccupancyQueryService.getFloorOccupancy()` | P1 | Penuh |
+| Gerbang Pintar | Buka palang, siapkan info ketersediaan per lantai | Smart Gate, `floors` pada respons 500 atau `GET /occupancy/floors` | Aktivitas internal SmartGateParticipant | P1 | Penuh |
+| Gerbang Pintar | Palang tetap tertutup, siapkan pesan penolakan | Smart Gate, respons 400 `INVALID_CARD` | Aktivitas internal SmartGateParticipant | — | Penuh |
+| Gerbang Pintar | Pakai sistem kartu lama: buka palang, pesan umum | — | Aktivitas internal SmartGateParticipant | — | Di luar lingkup prototipe |
+| Gerbang Pintar | Hitung tarif & proses bayar; Petugas tangani pembayaran (sistem lama); Buka palang keluar | — | Aktivitas internal SmartGateParticipant | — | Di luar lingkup prototipe |
+| Platform, Akses & rekomendasi (AI) | Validasi kartu & catat masuk | `POST /gate/entry-tap`, tabel `cards` dan `entries` | `AccessService.validateUserCard()`, `recordEntryTime()` | Prasyarat P1 | Penuh |
+| Platform, Akses & rekomendasi (AI) | AI pilih lantai & slot | `POST /gate/entry-tap`, `ai/recommend.py` | `SlotRecommendationService.requestSlotRecommendation()` | P1, P4 | Penuh |
+| Platform, Akses & rekomendasi (AI) | Kirim perintah LED ke slot | `POST /gate/entry-tap` (kolom `recommended_at`), terlihat pada `GET /slots` | `LedControlService.setLedState()` | P2 | Sebagian, tanpa MQTT |
+| Platform, Akses & rekomendasi (AI) | Catat keluar & rilis sesi | — | `ExitSessionService.recordExit()`, `releaseSession()` | — | Di luar lingkup prototipe |
+| Platform, Status slot & analitik (IoT + AI) | Perbarui status slot, LED & AI cek anomali (subproses) | `PUT /slots/{slot_id}/status` | `SlotSensingService.updateSlotStatus()`, `LedControlService.setLedState()`, `AnomalyPredictionService.detectSensorAnomaly()`; keluaran melalui `OccupancyQueryService` dan `PredictionQueryService` | P2, P3, P5 | Penuh, rincian pada Tabel 3.8.2 |
+| Platform, Status slot & analitik (IoT + AI) | Periksa lastUpdate tiap slot & masa tanda kuning | Fungsi `refresh()`, tercermin pada `GET /slots` dan `GET /occupancy/floors` | `AnomalyPredictionService.detectSensorAnomaly()`, `LedControlService.setLedState()` | P5 | Sebagian, dihitung saat data dibaca |
+| Platform, Status slot & analitik (IoT + AI) | Tandai UNKNOWN, LED OFF, keluarkan dari rekomendasi | Fungsi `refresh()`, peringatan di *dashboard* | `AnomalyPredictionService.detectSensorAnomaly()`, `LedControlService.setLedState()` | P5 | Penuh |
+| Platform, Status slot & analitik (IoT + AI) | Kembalikan LED ke warna status slot | Fungsi `refresh()` setelah 120 detik | `LedControlService.setLedState()` | P2 | Penuh |
+| Platform, Status slot & analitik (IoT + AI) | Rentang jam valid?; AI prediksi okupansi per jam & susun advisory | `GET /ai/predictions/occupancy`, `ai/predict.py` | `AnomalyPredictionService.predictOccupancy()`, `PredictionQueryService.getOccupancyPrediction()` | P3, P4 | Penuh, data historis simulasi |
+| Sensor & LED slot | Nyalakan LED slot rekomendasi | Panel LED simulator dan peta slot Smart Gate | `LedControlService.setLedState()` | P2 | Penuh, LED disimulasikan |
+| Sensor & LED slot | Deteksi kendaraan & kirim status | Simulator, `PUT /slots/{slot_id}/status` | `SlotSensingService.updateSlotStatus()` | P3, P5 | Penuh, sensor disimulasikan |
+| Sensor & LED slot | Deteksi motor keluar slot & kirim status kosong | Simulator, `PUT /slots/{slot_id}/status` | `SlotSensingService.updateSlotStatus()` | P1, P3 | Penuh, sensor disimulasikan |
+| Sensor & LED slot | *Heartbeat* paling lama 30 detik | *Thread heartbeat* simulator tiap 20 detik | `SlotSensingService.updateSlotStatus()` | P5 | Penuh |
+| Pengelola Parkir ITB | Menerima peringatan sensor dan prediksi okupansi | *Dashboard* Pengelola | `OccupancyQueryService.getFloorOccupancy()`, `PredictionQueryService.getOccupancyPrediction()` | P3, P4, P5 | Penuh |
+
+Tabel 3.8.2 merinci aktivitas di dalam subproses "Perbarui status slot, LED & AI cek anomali" pada Gambar 2.1.3. Seluruh aktivitas ini dijalankan dalam satu pemanggilan `PUT /slots/{slot_id}/status`.
+
+Tabel 3.8.2 Pemetaan aktivitas subproses status slot
+
+| Aktivitas BPMN To-Be | Realisasi di prototipe | Operasi SoaML | Realisasi |
+|---|---|---|---|
+| Periksa kunci perangkat & kelengkapan data | `backend/auth.py` (401 `UNAUTHORIZED`), validasi *payload* (400 `INVALID_REQUEST`), daftar status valid (400 `INVALID_STATUS`) | `SlotSensingService.updateSlotStatus()` | Penuh |
+| AI cek anomali pembacaan sensor | `detect_anomaly` di `ai/anomaly.py`; `OUT_OF_RANGE` membuat slot UNKNOWN dengan LED OFF | `AnomalyPredictionService.detectSensorAnomaly()` | Penuh |
+| Tentukan status dari jarak & simpan | Status ditentukan *gateway* dari ambang 30 cm; platform menyimpan ke tabel `slots` dan `readings`, dengan 500 `DB_UPDATE_FAILED` bila gagal | `SlotSensingService.updateSlotStatus()` | Sebagian, penentuan status di *edge* |
+| Status baru?; Set LED merah / Set LED hijau, hapus tanda kuning | Fungsi `led_color()` di `backend/services.py`; tanda kuning dipertahankan pada laporan AVAILABLE dan dihapus saat OCCUPIED atau UNKNOWN | `LedControlService.setLedState()` | Sebagian, tanda kuning tidak dihapus oleh AVAILABLE |
+| Kirim perintah LED ke slot | `ledCommand` pada respons `PUT` | `LedControlService.setLedState()` | Sebagian, tanpa MQTT |
+| Perbarui okupansi per lantai & simpan riwayat untuk prediksi | Okupansi dihitung saat `GET /occupancy/floors` dibaca; bacaan disimpan di tabel `readings` tetapi belum dipakai prediksi | `OccupancyQueryService.getFloorOccupancy()`, `PredictionQueryService.getOccupancyPrediction()` | Sebagian |
+
+Tiga *endpoint* pendukung, yaitu `GET /slots`, `POST /dev/scenario/{name}`, dan `POST /dev/fault/recommendation`, tidak dipetakan ke operasi SoaML. `GET /slots` dipakai untuk peta slot dan peringatan sensor, sedangkan dua *endpoint* lainnya hanya dipakai untuk demo dan pengujian.
+
+Tabel 3.8.3 merangkum cara prototipe menjawab kelima masalah dari sisi fitur.
+
+Tabel 3.8.3 Masalah dan fitur prototipe yang menjawabnya
+
+| Masalah | Fitur prototipe |
+|---|---|
+| P1 Pengguna tidak tahu lokasi slot kosong | Rekomendasi lantai dan slot di layar gerbang; ketersediaan per lantai saat rekomendasi kosong atau gagal |
+| P2 Tidak ada petunjuk visual menuju slot | LED kuning untuk slot rekomendasi, hijau untuk slot kosong, merah untuk slot terisi |
+| P3 Pengelola tidak punya data okupansi real-time maupun historis | Kartu okupansi per lantai yang diperbarui tiap 3 detik dan grafik prediksi dari data historis simulasi |
+| P4 Penggunaan lantai tidak merata | Aturan 85% dan skor keseimbangan pada rekomendasi; *advisory* untuk membuka lantai tertutup lebih awal |
+| P5 Pengawasan area parkir masih manual | Deteksi sensor di luar rentang dan sensor basi; peringatan sensor otomatis di *dashboard* |
+
+## 3.9 Ringkasan dan Keterbatasan
+
+Prototipe ParkSense telah mewujudkan empat *endpoint* inti beserta *endpoint* pendukung, paket AI untuk rekomendasi, prediksi, dan deteksi anomali, simulator IoT, halaman Smart Gate, dan *Dashboard* Pengelola. Kedua alur utama, yaitu tap kartu hingga LED kuning dan laporan sensor hingga *dashboard*, berjalan dari ujung ke ujung pada satu laptop. Tes API untuk TC-01 sampai TC-09 beserta kasus galat lulus seluruhnya, yaitu 13 tes, seperti terlihat pada `tests/evidence/api-pytest-run.png`. [TODO: bukti hasil tes paket AI dan tes simulator]
+
+Prototipe ini memiliki sejumlah keterbatasan yang perlu dicatat secara jujur.
+
+- Sensor ultrasonik, *gateway* ESP32, LED, dan pembaca kartu disimulasikan oleh perangkat lunak.
+- Perintah LED dikirim sebagai `ledCommand` pada respons API tanpa MQTT, dan tanda kuning hasil tap kartu hanya terlihat melalui `GET /slots`.
+- Model AI sederhana, yaitu aturan berbobot untuk rekomendasi dan rata-rata historis untuk prediksi; regresi linear belum dibuat.
+- Data historis disimulasikan, belum membedakan hari kerja dan akhir pekan, dan bacaan sensor di tabel `readings` belum dipakai sebagai sumber prediksi.
+- Sensor basi dan masa tanda kuning dihitung saat data dibaca, bukan oleh timer berkala.
+- `GET /slots` dan `/dev/*` adalah *endpoint* pendukung di luar kontrak inti.
+- Tahap keluar dan bayar serta timer 3 detik di gerbang tidak diimplementasikan.
+- Otorisasi memakai satu kunci perangkat dan satu token *dashboard* yang statis.
+
+Keterbatasan tersebut menjadi dasar rencana pengembangan. Langkah yang paling dekat adalah memakai tabel `readings` sebagai sumber data historis prediksi, menambahkan MQTT agar perintah LED terkirim langsung ke perangkat, dan menguji kontrak yang sama dengan ESP32 serta sensor fisik.
+
+Pengujian prototipe terhadap kasus uji TC-01 sampai TC-09, termasuk hasil aktual dan buktinya, dibahas pada bab Pengujian. Bab ini hanya merujuk bukti yang berkaitan langsung dengan implementasi.
