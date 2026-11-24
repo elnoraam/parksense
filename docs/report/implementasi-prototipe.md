@@ -249,3 +249,155 @@ Keterangan bukti: "pytest" merujuk pada fungsi uji di `tests/api_tests/test_tc_a
 Galat pada sisi gerbang dirancang agar pengemudi dengan kartu valid tidak tertahan. Respons 200 dengan `recommendation: null` dan respons 500 `RECOMMENDATION_FAILED` sama-sama membawa `gateAction: "OPEN_BARRIER"`, sehingga halaman gerbang membuka palang dan menampilkan ketersediaan per lantai. Hanya kartu yang tidak terdaftar yang membuat palang tetap tertutup.
 
 Galat pada sisi sensor tidak ditolak, tetapi diubah menjadi status UNKNOWN. Dengan cara ini, slot bermasalah tetap terlihat oleh pengelola sebagai peringatan, tidak terhitung sebagai slot tersedia, dan tidak pernah dipilih oleh rekomendasi. Galat teknis seperti 404 dan `INVALID_REQUEST` tidak dimodelkan di BPMN karena hanya menyangkut validasi format permintaan.
+
+## 3.5 Peran IoT
+
+### 3.5.1 Simulator Gateway dan Sensor
+
+Lapisan IoT pada prototipe diwujudkan oleh simulator `simulator/sensor_sim.py` yang berperan sebagai *gateway* ESP32 per lantai sekaligus sensor ultrasonik per slot. Setiap laporan dikirim ke `PUT /slots/{slot_id}/status` dengan *header* `X-Device-Key`, `gatewayId` `ESP32-GW-F1` atau `ESP32-GW-F2` sesuai lantai, dan `sensorType` `ULTRASONIC`. Alamat API, kunci perangkat, ambang sensor, dan interval *heartbeat* dikumpulkan di satu berkas, `simulator/config.py`, dan dapat diganti melalui variabel lingkungan.
+
+Simulator menerapkan aturan sensor dari kontrak. Jarak di bawah 30 cm berarti ada motor (OCCUPIED), sedangkan jarak 30 cm atau lebih berarti kosong (AVAILABLE). Simulator membangkitkan jarak 10–25 cm untuk slot terisi dan 80–200 cm untuk slot kosong. Nilai di luar rentang valid 2–400 cm tetap dikirim apa adanya, sehingga deteksi anomali dilakukan di platform.
+
+LED slot digantikan oleh panel berwarna di terminal yang menampilkan 40 slot dalam warna hijau, merah, kuning, atau abu-abu (OFF). Warna setiap slot diperbarui dari `ledCommand.color` pada respons `PUT`. Tanda kuning hasil tap kartu ditetapkan oleh platform tanpa laporan sensor, sehingga panel menyinkronkannya dari `GET /slots` melalui perintah `panel`.
+
+### 3.5.2 Heartbeat
+
+Platform menandai slot UNKNOWN bila tidak menerima laporan lebih dari 60 detik. Karena itu simulator menjalankan *thread* latar yang mengirim ulang bacaan terakhir setiap 20 detik untuk semua slot yang pernah melapor. Nilai 20 detik dipilih agar memenuhi batas maksimum 30 detik pada rancangan dengan selisih yang aman. Perintah `stop` mengeluarkan satu slot dari *heartbeat*, dan cara inilah yang dipakai untuk memicu sensor basi pada TC-05 tanpa memengaruhi slot lain.
+
+### 3.5.3 Mode Simulator
+
+Simulator menyediakan tiga mode yang dirangkum pada Tabel 3.5.1. Mode manual dipakai saat demo, mode otomatis dipakai untuk menunjukkan pola jam puncak, dan mode *fault* dipakai untuk menguji sensor bermasalah.
+
+Tabel 3.5.1 Mode simulator IoT
+
+| Mode | Cara menjalankan | Perilaku |
+|---|---|---|
+| Manual | `python -m simulator.sensor_sim manual` | Konsol interaktif: `set F2-A17 occupied` atau `free`, `stop`, `resume`, `glitch`, `scenario`, `panel`, `floors` |
+| Otomatis | `python -m simulator.sensor_sim auto --speed 60 --start-hour 6` | Motor datang dan pergi secara acak mengikuti tabel kedatangan per jam yang memuncak pada pukul 07.00; `--speed 60` berarti 1 detik nyata sama dengan 1 menit simulasi; opsi `--tap` membuat setiap motor tap kartu dan parkir di slot rekomendasi |
+| *Fault* | `python -m simulator.sensor_sim fault glitch F2-A17` atau `fault stop F2-A17` | `glitch` mengirim 500 cm sehingga slot menjadi UNKNOWN dengan `anomaly: "OUT_OF_RANGE"`; `stop` menghentikan *heartbeat* sehingga slot menjadi UNKNOWN setelah lebih dari 60 detik |
+
+Selain ketiga mode tersebut, simulator memiliki *runner* kasus uji di `simulator/scenarios/`. *Runner* TC-04 mengirim jarak 15 cm lalu 150 cm pada satu slot dan memeriksa perubahan LED merah ke hijau serta jumlah `available`. *Runner* TC-05 memiliki varian `glitch`, `scenario`, dan `stale`, dan setiap *runner* menulis log bertanda waktu ke `tests/evidence/`. [TODO: bukti log runner TC-04 dan TC-05]
+
+### 3.5.4 Penggantian dengan Perangkat Fisik
+
+Karena simulator memakai kontrak yang sama dengan perangkat nyata, penggantian ke perangkat fisik tidak mengubah platform. Tabel 3.5.2 merangkum hal yang perlu diwujudkan pada perangkat fisik.
+
+Tabel 3.5.2 Penggantian simulator dengan perangkat fisik
+
+| Bagian simulator | Pengganti fisik | Hal yang tetap sama |
+|---|---|---|
+| Nilai jarak acak | Sensor ultrasonik per slot | Satuan cm, ambang 30 cm, rentang valid 2–400 cm |
+| Skrip `sensor_sim.py` | *Firmware* ESP32 per lantai | `PUT /slots/{slot_id}/status`, *payload*, dan `X-Device-Key` |
+| *Thread heartbeat* | Pengiriman ulang berkala di *firmware* | Interval paling lama 30 detik |
+| Panel LED di terminal | LED per slot yang dikendalikan ESP32 | Warna diambil dari `ledCommand.color` dan `ledColor` |
+| Isian `cardId` di halaman gerbang | Pembaca kartu RFID | `POST /gate/entry-tap` dengan `cardId` dari kartu |
+
+Satu hal perlu ditambahkan pada perangkat fisik. Tanda kuning hasil tap kartu tidak dikirim ke *gateway* melalui respons `PUT`, sehingga ESP32 perlu membaca `GET /slots` secara berkala atau menerima perintah melalui MQTT, yang pada prototipe ini belum diimplementasikan.
+
+## 3.6 Peran AI
+
+Paket `ai/` berisi tiga kemampuan yang dipanggil platform sebagai fungsi Python murni: rekomendasi slot, prediksi okupansi beserta *advisory*, dan deteksi anomali sensor. Model yang dipakai sengaja sederhana, yaitu aturan berbobot dan rata-rata historis, agar keputusannya dapat dijelaskan dan diaudit tanpa data pelatihan. Paket ini diuji tersendiri melalui `tests/ai_tests/test_ai.py`.
+
+### 3.6.1 Rekomendasi Slot
+
+Fungsi `recommend_slot(slots, floors)` pertama-tama menyaring kandidat. Hanya slot AVAILABLE di lantai yang dibuka yang boleh dipilih, sehingga slot UNKNOWN, slot terisi, dan lantai tertutup tidak pernah direkomendasikan. Bila tidak ada kandidat, fungsi mengembalikan `None` dan platform meneruskannya sebagai `recommendation: null`.
+
+Setiap kandidat kemudian diberi skor gabungan dengan bobot konstanta `W_CAPACITY = 0.4`, `W_PROXIMITY = 0.3`, dan `W_BALANCE = 0.3` di `ai/recommend.py`. Komponen skor dijelaskan pada Tabel 3.6.1.
+
+Tabel 3.6.1 Komponen skor rekomendasi slot
+
+| Komponen | Bobot | Rumus | Makna |
+|---|---|---|---|
+| Kapasitas | 0,4 | slot kosong lantai ÷ total slot lantai | Mengutamakan lantai yang masih longgar |
+| Kedekatan | 0,3 | 1 − (nomor slot − 1) ÷ total slot lantai | Nomor slot kecil dianggap dekat gerbang, misalnya A01 |
+| Keseimbangan | 0,3 | 1 − (okupansi lantai − okupansi lantai terendah) | Mendorong motor tersebar merata antarlantai |
+
+Sebelum skor dihitung, lantai dengan okupansi 85% atau lebih (`OVERLOAD_RATIO = 0.85`) dibuang dari kandidat selama masih ada lantai lain di bawah 85% yang memiliki slot kosong. Aturan ini menjawab masalah penggunaan lantai yang tidak merata (P4). Bila semua lantai sudah melewati 85%, seluruh lantai yang masih memiliki slot kosong tetap boleh dipilih.
+
+Skor dibulatkan hingga enam desimal, lalu skor tertinggi dipilih. Bila ada skor yang sama, ID slot terkecil menang, sehingga masukan yang sama selalu menghasilkan rekomendasi yang sama. Tabel 3.6.2 memberi contoh masukan dan keluaran pada skenario uji.
+
+Tabel 3.6.2 Contoh masukan dan keluaran rekomendasi
+
+| Kondisi | Masukan | Keluaran |
+|---|---|---|
+| Gedung kosong (`reset`) | Hanya lantai 1 dibuka, 20 slot kosong | `F1-A01`, skor 1,00 |
+| Jam puncak (`peak_hour`) | Lantai 1 terisi 19 dari 20 (95%), lantai 2 dibuka dan terisi 4 dari 20 (20%) | Lantai 1 dibuang karena di atas 85%; `F2-A05` dengan skor 0,4 × 0,8 + 0,3 × 0,8 + 0,3 × 1 = 0,86 |
+| Semua penuh (`all_full`) | Semua slot di dua lantai terisi | `None`, diteruskan sebagai `recommendation: null` |
+| Sensor basi (`sensor_stale`) | `F1-A05` dan `F1-A06` berstatus UNKNOWN | Kedua slot tidak pernah dipilih |
+
+### 3.6.2 Prediksi Okupansi dan Advisory
+
+Fungsi `predict_occupancy(time_window, history)` menghitung rata-rata `occupancyPercent` untuk setiap pasangan jam dan lantai pada rentang jam yang diminta, termasuk jam akhir, lalu membulatkannya ke satu desimal. Rentang yang bukan bilangan bulat, di luar 0–23, atau dengan `fromHour ≥ toHour` ditolak dengan `ValueError`. Platform memeriksa syarat yang sama lebih dulu dan mengembalikan 400 `INVALID_TIME_WINDOW`.
+
+Data historis berasal dari `ai/seed_history.py` yang membangkitkan 14 hari kerja × 24 jam × 2 lantai, yaitu 672 baris, ke `ai/history.json`. Lantai 1 mengikuti pola harian yang naik pukul 06.30–09.00 dan penuh sekitar 07.30–11.00, sedangkan lantai 2 baru terisi setelah lantai 1 melewati 80%. Variasi acak memakai *seed* tetap (42), sehingga data selalu sama setiap kali dibangkitkan.
+
+Fungsi `make_advisory(predictions, floors)` mencari jam paling penuh di lantai yang sedang dibuka. Bila puncaknya 85% atau lebih dan masih ada lantai tertutup, *advisory* menyarankan membuka lantai tersebut lebih awal. Bila puncaknya 85% atau lebih tetapi semua lantai sudah dibuka, *advisory* menyarankan menyiapkan petugas, dan di bawah 85% *advisory* menyatakan parkiran masih aman.
+
+Tabel 3.6.3 menunjukkan keluaran prediksi untuk rentang pukul 06.00–09.00. Pada kondisi awal dengan lantai 2 tertutup, *advisory* yang dihasilkan adalah "Lantai 1 diperkirakan terisi 97% pada pukul 09.00. Disarankan membuka lantai 2 lebih awal." Setelah skenario jam puncak membuka lantai 2, prediksi yang sama menghasilkan "Lantai 1 diperkirakan terisi 97% pada pukul 09.00. Semua lantai sudah terbuka, siapkan petugas untuk mengarahkan pengemudi."
+
+Tabel 3.6.3 Contoh keluaran prediksi okupansi pukul 06.00–09.00
+
+| Jam | Lantai 1 (%) | Lantai 2 (%) |
+|---|---|---|
+| 06.00 | 21,7 | 0,0 |
+| 07.00 | 69,3 | 0,0 |
+| 08.00 | 94,8 | 37,2 |
+| 09.00 | 97,2 | 46,0 |
+
+### 3.6.3 Deteksi Anomali Sensor
+
+Fungsi `detect_anomaly(reading, last_update, now)` mengembalikan `OUT_OF_RANGE` bila jarak berada di luar 2–400 cm, `STALE` bila laporan terakhir lebih tua dari 60 detik atau belum pernah ada, dan `OK` untuk kondisi lainnya. Pada `PUT /slots/{slot_id}/status`, fungsi ini dipanggil dengan waktu laporan sama dengan waktu sekarang, sehingga yang diperiksa hanya rentang nilai. Hasil selain `OK` membuat slot menjadi UNKNOWN dengan LED OFF.
+
+Pemeriksaan sensor basi dilakukan terpisah oleh fungsi `refresh()` di platform dengan batas `STALE_SECONDS` yang sama, yaitu 60 detik. Berbeda dari `detect_anomaly`, `refresh()` hanya menandai slot yang pernah melapor. Slot dari data awal yang belum pernah dilaporkan simulator tidak langsung menjadi UNKNOWN.
+
+### 3.6.4 Keterbatasan Model
+
+Model rekomendasi berupa aturan berbobot yang ditentukan tim, bukan hasil pembelajaran dari data. Kedekatan slot juga hanya didekati dari nomor slot, bukan dari jarak sebenarnya ke gerbang.
+
+Prediksi memakai rata-rata dari data historis simulasi, belum membedakan hari kerja dan akhir pekan, dan belum memakai bacaan sensor nyata yang tersimpan di tabel `readings`. Opsi regresi linear sederhana yang direncanakan juga belum dibuat. Ketiga hal ini menjadi bahan rencana pengembangan.
+
+## 3.7 Antarmuka Smart Gate dan Dashboard Pengelola
+
+### 3.7.1 Smart Gate
+
+Halaman Smart Gate (`web/gate/index.html`) mewujudkan layar gerbang dan pembaca kartu virtual. Pengguna mengisi `cardId` atau memilih tombol "Kartu valid" dan "Kartu tidak valid", lalu menekan "Tap" untuk memanggil `POST /gate/entry-tap`. Seluruh permintaan memakai `X-Device-Key`, dan alamat API serta kunci dibaca dari satu objek konfigurasi.
+
+Layar gerbang menampilkan hasil tap sesuai respons platform. Rekomendasi tampil sebagai lantai dan slot dengan status palang terbuka selama 10 detik, sedangkan rekomendasi kosong atau gagal tetap membuka palang dan menampilkan ketersediaan per lantai. Kartu tidak terdaftar menampilkan "Kartu ditolak" dengan palang tertutup, dan kegagalan koneksi menampilkan "Server tidak terjangkau".
+
+Di bawah layar gerbang terdapat peta 2 lantai × 20 slot dari `GET /slots` dan `GET /occupancy/floors` yang diperbarui setiap 2 detik. Setiap slot menampilkan LED virtual hijau, merah, kuning, atau abu-abu, lantai tertutup ditampilkan redup, dan slot rekomendasi disorot selama masih berwarna kuning.
+
+**[Sisipkan Gambar 3.7.1: TODO tangkapan layar Smart Gate setelah tap valid pada skenario peak_hour]**
+
+Gambar 3.7.1 Halaman Smart Gate dengan rekomendasi slot dan LED kuning
+
+[TODO: bukti tangkapan layar Smart Gate untuk TC-01]
+
+### 3.7.2 Dashboard Pengelola
+
+*Dashboard* Pengelola (`web/dashboard/index.html`) memakai `Authorization: Bearer` dan memperbarui data okupansi serta slot setiap 3 detik. Bagian atasnya memuat status koneksi, waktu pembaruan terakhir dalam WIB, dan empat ringkasan: slot kosong, slot terisi, slot tidak diketahui, dan jumlah lantai dibuka. Setiap lantai ditampilkan sebagai kartu berisi persentase terisi, jumlah `available`, `occupied`, dan `unknown`, serta tanda DIBUKA atau DITUTUP.
+
+Persentase terisi dihitung sebagai `occupied ÷ total` dan diberi warna biru di bawah 70%, oranye pada 70–84%, dan merah pada 85% atau lebih. Ambang 85% ini sama dengan ambang pada rekomendasi dan *advisory*, sehingga pengelola melihat batas yang sama dengan yang dipakai AI.
+
+**[Sisipkan Gambar 3.7.2: tests/evidence/dashboard/peak_hour_dashboard.png]**
+
+Gambar 3.7.2 Dashboard Pengelola pada skenario jam puncak
+
+Bagian peringatan sensor menampilkan setiap slot berstatus UNKNOWN dari `GET /slots` beserta lantainya, waktu laporan terakhir, dan keterangan bahwa LED padam dan slot dikeluarkan dari rekomendasi. Peringatan baru diberi animasi sorotan, dan bila tidak ada slot UNKNOWN, bagian ini menyatakan semua sensor normal. Bagian ini mewujudkan pengawasan area parkir tanpa patroli manual (P5).
+
+**[Sisipkan Gambar 3.7.3: tests/evidence/dashboard/tc05_dashboard_unknown.png]**
+
+Gambar 3.7.3 Peringatan sensor pada Dashboard Pengelola (TC-05)
+
+Bagian prediksi memiliki isian `fromHour` dan `toHour` dengan nilai awal 6 dan 9 serta tombol "Tampilkan Prediksi" untuk memanggil `GET /ai/predictions/occupancy`. Hasilnya digambar dengan Chart.js sebagai grafik garis per lantai dengan garis bantu putus-putus pada 85%, disertai jam puncak tiap lantai dan teks *advisory*. Bagian ini menjawab kebutuhan data okupansi bagi pengelola (P3) dan dasar keputusan membuka lantai atas lebih awal (P4).
+
+**[Sisipkan Gambar 3.7.4: TODO tangkapan layar grafik prediksi TC-06 dengan AI aktif]**
+
+Gambar 3.7.4 Grafik prediksi okupansi dan advisory pada Dashboard Pengelola
+
+[TODO: tangkapan layar TC-06 dengan AI aktif]
+
+Galat ditampilkan tanpa menghapus data terakhir. Rentang jam yang salah memunculkan kode dan pesan galat dari platform, misalnya `INVALID_TIME_WINDOW`, sementara grafik dan *advisory* sebelumnya tetap ditampilkan dengan keterangan bahwa itu hasil sebelumnya. Kegagalan koneksi dan token yang tidak valid ditampilkan sebagai *banner* di bagian atas halaman.
+
+**[Sisipkan Gambar 3.7.5: tests/evidence/dashboard/tc06_invalid_window.png]**
+
+Gambar 3.7.5 Pesan galat INVALID_TIME_WINDOW pada Dashboard Pengelola
