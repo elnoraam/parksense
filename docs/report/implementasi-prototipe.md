@@ -119,3 +119,133 @@ Setiap galat dikembalikan dalam format seragam `{"status", "code", "message"}`, 
 Otorisasi dibedakan menurut jenis klien. Perangkat, yaitu *gateway* IoT dan Smart Gate, memakai *header* `X-Device-Key`, sedangkan dashboard pengelola memakai `Authorization: Bearer`. Kunci yang tidak ada atau salah menghasilkan 401 `UNAUTHORIZED`, dan nilai kunci hanya didefinisikan di `backend/auth.py` serta dapat diganti melalui variabel lingkungan.
 
 Modul AI dihubungkan melalui adaptor dengan mekanisme cadangan (*fallback*). `ai_adapter.py` mencoba mengimpor setiap fungsi dari paket `ai/` secara terpisah; bila suatu fungsi tidak tersedia, dipakai implementasi sederhana di `ai_fallback.py` dengan tanda tangan yang sama. Pada prototipe akhir, `GET /health` menunjukkan bahwa keenam fungsi memakai paket `ai/`.
+
+## 3.3 Alur Layanan Utama
+
+Alur layanan prototipe mengikuti lima tahap BPMN To-Be pada Gambar 2.1.2, yaitu kedatangan, tap kartu dan rekomendasi, menuju slot, memarkir, serta keluar dan bayar. Dua alur diwujudkan secara utuh: tap kartu hingga LED kuning menyala, dan laporan sensor hingga perubahan tampil di *dashboard*. Tahap keluar dan bayar tetap memakai sistem yang sudah berjalan di gedung parkir sehingga berada di luar lingkup prototipe.
+
+### 3.3.1 Tap Kartu hingga LED Kuning
+
+```mermaid
+sequenceDiagram
+  actor P as Pengemudi
+  participant G as Smart Gate
+  participant API as ParkSense Platform
+  participant AI as Paket AI
+  participant DB as SQLite
+  P->>G: Tap kartu (cardId)
+  G->>API: POST /gate/entry-tap (X-Device-Key)
+  API->>DB: Cek cardId pada tabel cards
+  alt Kartu tidak terdaftar
+    API-->>G: 400 INVALID_CARD
+    G-->>P: Palang tertutup dan pesan penolakan
+  else Kartu valid
+    API->>API: refresh() sensor basi dan masa tanda kuning
+    API->>AI: recommend_slot(slots, floors)
+    AI-->>API: floorNumber dan slotId, atau None
+    API->>DB: Tandai slot YELLOW (recommended_at)
+    API->>DB: Catat masuk (entries)
+    API-->>G: 200 recommendation, OPEN_BARRIER, displayMessage
+    G-->>P: Lantai dan slot di layar, palang terbuka
+    G->>API: GET /slots (tiap 2 dtk)
+    API-->>G: ledColor YELLOW pada slot rekomendasi
+  end
+```
+
+**[Sisipkan Gambar 3.3.1: ekspor diagram mermaid di atas]**
+
+Gambar 3.3.1 Diagram urutan tap kartu hingga LED kuning
+
+Gambar 3.3.1 menunjukkan bahwa satu permintaan `POST /gate/entry-tap` mencakup validasi kartu, pencatatan masuk, rekomendasi AI, dan penandaan LED sekaligus. Cabang kartu tidak terdaftar berhenti di platform tanpa memanggil AI. Kasus rekomendasi kosong dan modul AI gagal dibahas pada Subbab 3.4.
+
+Tahap kedatangan diawali aktivitas "Antre & tiba di gerbang" dan "Tap kartu di pembaca". Karena pembaca kartu disimulasikan, pengemudi memasukkan `cardId` pada halaman Smart Gate lalu menekan tombol tap. Halaman kemudian menjalankan "Baca kartu & minta rekomendasi" dengan mengirim `gateId` `GATE-IN-01`, `cardId`, `vehicleType` `MOTORCYCLE`, dan `tapTime` berzona `+07:00`.
+
+Pada tahap tap kartu dan rekomendasi, platform menjalankan "Validasi kartu & catat masuk" dengan mencocokkan `cardId` ke tabel `cards`. Untuk kartu valid, "AI pilih lantai & slot" memanggil `recommend_slot` dengan daftar slot yang tidak sedang ditandai kuning untuk pengemudi lain, dan pemanggilan diulang dengan seluruh slot bila daftar itu tidak menghasilkan slot. Slot terpilih ditandai kuning melalui kolom `recommended_at` sebagai wujud aktivitas "Kirim perintah LED ke slot". Setiap tap juga dicatat di tabel `entries`.
+
+Respons 200 berisi `recommendation`, `gateAction: "OPEN_BARRIER"`, dan `displayMessage`, misalnya `"Lantai 2 - Slot F2-A05"`. Halaman Smart Gate kemudian menjalankan "Buka palang, siapkan info lantai & slot" dan "Tampilkan di layar gerbang". Lantai dan slot ditampilkan, palang ditandai terbuka, dan slot tersebut disorot pada peta slot.
+
+Pada tahap menuju slot, pengemudi menjalankan "Lihat informasi di layar gerbang" lalu "Menuju slot ikuti lampu LED". LED kuning terlihat pada peta slot halaman gerbang yang diperbarui tiap 2 detik dan pada panel LED simulator. Tanda kuning bertahan 120 detik (`RECOMMEND_TTL_SECONDS`), dan selama itu tap berikutnya tidak mendapat slot yang sama.
+
+Rekomendasi bukan reservasi. Bila slot sudah diisi motor lain sebelum pengemudi tiba, laporan OCCUPIED dari sensor mengakhiri tanda kuning dan LED berubah merah. Pengemudi lalu menjalankan "Slot terisi: pilih slot lain ber-LED hijau".
+
+### 3.3.2 Laporan Sensor hingga Dashboard
+
+```mermaid
+sequenceDiagram
+  participant S as Sensor dan gateway (simulator)
+  participant API as ParkSense Platform
+  participant AI as Paket AI
+  participant DB as SQLite
+  participant D as Dashboard Pengelola
+  S->>S: Jarak kurang dari 30 cm, status OCCUPIED
+  S->>API: PUT /slots/F2-A05/status (X-Device-Key)
+  API->>API: Periksa status, measuredAt, dan slotId
+  API->>AI: detect_anomaly(bacaan)
+  AI-->>API: OK atau OUT_OF_RANGE
+  API->>DB: Simpan status, warna LED, last_update, readings
+  API-->>S: 200 currentStatus dan ledCommand
+  S->>S: LED virtual berubah warna
+  loop Tiap 20 dtk
+    S->>API: Heartbeat, kirim ulang bacaan terakhir
+  end
+  loop Tiap 3 dtk
+    D->>API: GET /occupancy/floors dan GET /slots (Bearer)
+    API->>API: refresh() tandai sensor basi lebih dari 60 dtk
+    API-->>D: Ringkasan lantai dan daftar slot
+    D->>D: Perbarui kartu lantai dan peringatan sensor
+  end
+```
+
+**[Sisipkan Gambar 3.3.2: ekspor diagram mermaid di atas]**
+
+Gambar 3.3.2 Diagram urutan laporan sensor hingga dashboard
+
+Gambar 3.3.2 memperlihatkan dua perulangan yang berjalan terpisah. Simulator mengirim laporan saat keadaan slot berubah dan mengirim ulang laporan terakhir sebagai *heartbeat*. *Dashboard* membaca hasilnya secara berkala tanpa berkomunikasi langsung dengan simulator.
+
+Tahap memarkir diawali "Parkir di slot" dan "Deteksi kendaraan & kirim status". *Gateway* simulator mengubah jarak di bawah 30 cm menjadi OCCUPIED, lalu memanggil `PUT /slots/{slot_id}/status` dengan *payload* `gatewayId`, `sensorType`, `rawSensorValue`, `unit`, `status`, dan `measuredAt`. Saat motor keluar, aktivitas "Deteksi motor keluar slot & kirim status kosong" mengirim jarak 30 cm atau lebih dengan status AVAILABLE.
+
+Platform menjalankan subproses "Perbarui status slot, LED & AI cek anomali" (Gambar 2.1.3). Kelengkapan data diperiksa lebih dulu, kemudian `detect_anomaly` memastikan jarak berada di rentang 2–400 cm. Status dan warna LED disimpan ke tabel `slots`, bacaan dicatat di tabel `readings`, dan respons mengembalikan `currentStatus` serta `ledCommand` sebagai wujud "Kirim perintah LED ke slot". Okupansi per lantai tidak disimpan terpisah, tetapi dihitung dari tabel `slots` setiap kali `GET /occupancy/floors` dipanggil.
+
+Beberapa aktivitas direalisasikan berbeda dari rancangan. Aktivitas "Tentukan status dari jarak & simpan" dibagi antara *edge* dan platform: *gateway* menentukan status dari jarak karena ambang 30 cm paling dekat dengan sensor, sedangkan platform menerima status tersebut dan tetap memeriksa rentang nilai sensor. Selain itu, laporan AVAILABLE tidak menghapus tanda kuning, karena *heartbeat* mengirim ulang AVAILABLE tiap 20 detik dan akan memadamkan LED kuning sebelum pengemudi tiba. Tanda kuning baru dihapus saat slot menjadi OCCUPIED atau UNKNOWN, atau saat masa 120 detik habis.
+
+Perintah LED juga tidak dikirim melalui MQTT, melainkan sebagai *field* `ledCommand` pada respons API yang dibaca simulator. Nilai `sent: true` berarti perintah sudah dibuat platform, bukan bukti perintah diterima perangkat fisik. Alur timer "Periksa lastUpdate tiap slot & masa tanda kuning" pun tidak dijalankan sebagai timer 30 detik, melainkan oleh fungsi `refresh()` setiap kali data slot atau okupansi dibaca. Karena halaman gerbang membaca tiap 2 detik dan *dashboard* tiap 3 detik, efek yang dilihat pengguna sama: slot basi menjadi UNKNOWN dan LED kuning kembali ke warna status slot.
+
+Slot yang tidak melapor lebih dari 60 detik (`STALE_SECONDS`) ditandai UNKNOWN dengan LED OFF dan tanda kuningnya dihapus, sesuai aktivitas "Tandai UNKNOWN, LED OFF, keluarkan dari rekomendasi". Simulator mengirim *heartbeat* tiap 20 detik, lebih rapat dari batas 30 detik pada rancangan, sehingga sensor yang masih hidup tidak pernah dianggap basi. *Dashboard* membaca slot berstatus UNKNOWN dari `GET /slots` dan menampilkannya sebagai peringatan sensor bagi pengelola.
+
+### 3.3.3 Prediksi Okupansi untuk Pengelola
+
+Alur prediksi berjalan atas permintaan pengelola dari *dashboard*. *Dashboard* memanggil `GET /ai/predictions/occupancy` dengan parameter `fromHour` dan `toHour`, lalu platform memeriksa gateway "Rentang jam valid?" dengan syarat `0 ≤ fromHour < toHour ≤ 23`. Rentang yang valid diteruskan ke "AI prediksi okupansi per jam & susun advisory", dan hasilnya ditampilkan sebagai grafik per lantai beserta teks *advisory*. Rincian model dibahas pada Subbab 3.6.
+
+### 3.3.4 Tahap Keluar dan Bayar
+
+Aktivitas "Tap & bayar keluar", "Hitung tarif & proses bayar", "Buka palang keluar", dan "Catat keluar & rilis sesi" tidak diimplementasikan karena tarif dan pembayaran tetap memakai sistem yang sudah ada. Prototipe tidak memiliki *endpoint* keluar. Slot dikosongkan semata-mata oleh laporan sensor AVAILABLE, bukan oleh pencatatan sesi keluar.
+
+## 3.4 Penanganan Galat pada Prototipe
+
+Penanganan galat pada prototipe mengikuti jalur pengecualian di BPMN To-Be. Prinsip utamanya adalah palang tetap terbuka bagi kartu yang valid walaupun rekomendasi tidak tersedia, dan slot dengan sensor bermasalah tidak pernah direkomendasikan. Tabel 3.4.1 memetakan setiap kondisi galat ke perilaku prototipe, kode galat, aktivitas BPMN To-Be, dan bukti uji.
+
+Tabel 3.4.1 Penanganan galat pada prototipe
+
+| Kondisi | Perilaku prototipe | Endpoint dan kode | Aktivitas BPMN To-Be | Bukti |
+|---|---|---|---|---|
+| Kartu tidak terdaftar | Palang tidak dibuka; layar gerbang menampilkan "Kartu ditolak" | `POST /gate/entry-tap`, 400 `INVALID_CARD` | "Kartu valid?" (tidak); "Palang tetap tertutup, siapkan pesan penolakan" | TC-03 (pytest); [TODO: bukti tangkapan layar gerbang TC-03] |
+| Tidak ada slot AVAILABLE di lantai terbuka | `recommendation: null`, palang tetap dibuka, layar menampilkan "Parkir penuh." dan ketersediaan per lantai | `POST /gate/entry-tap`, 200 | "Ada slot AVAILABLE di lantai terbuka?" (tidak); "Buka palang, siapkan info ketersediaan per lantai" | TC-02 (pytest); [TODO: bukti tangkapan layar gerbang TC-02] |
+| Modul AI gagal | Palang tetap dibuka; respons membawa `gateAction`, `displayMessage`, dan `floors` | `POST /gate/entry-tap`, 500 `RECOMMENDATION_FAILED` | Kejadian "Modul AI gagal" pada "AI pilih lantai & slot"; "Buka palang, siapkan info ketersediaan per lantai" | TC-09 (pytest); [TODO: bukti tangkapan layar gerbang TC-09] |
+| Gerbang tidak mendapat respons lebih dari 3 detik | Tidak ada timer 3 detik; bila koneksi gagal, layar menampilkan "Server tidak terjangkau" dan palang tidak dibuka | — | Timer "> 3 dtk tanpa respons"; "Pakai sistem kartu lama: buka palang, pesan umum" | Di luar lingkup prototipe |
+| Kunci perangkat atau token salah atau tidak ada | Permintaan ditolak; *dashboard* menampilkan *banner* token tidak valid | Semua *endpoint* kecuali `/health`, 401 `UNAUTHORIZED` | "Periksa kunci perangkat & kelengkapan data" (tidak valid) | TC-07 (pytest); `dashboard/scenarios_dashboard_2026-11-24.txt` |
+| Status sensor di luar AVAILABLE, OCCUPIED, UNKNOWN | Laporan ditolak, status slot tidak berubah | `PUT /slots/{slot_id}/status`, 400 `INVALID_STATUS` | "Periksa kunci perangkat & kelengkapan data" (tidak valid) | TC-08 (pytest) |
+| *Payload* atau parameter tidak lengkap atau salah tipe, termasuk `measuredAt` bukan ISO 8601 | Permintaan ditolak | *Endpoint* dengan *body* atau parameter, 400 `INVALID_REQUEST` | "Periksa kunci perangkat & kelengkapan data" (tidak valid) | Uji kasus galat (pytest) |
+| ID slot tidak dikenal | Laporan ditolak | `PUT /slots/{slot_id}/status`, 404 `SLOT_NOT_FOUND` | Tidak dimodelkan (validasi teknis) | Uji kasus galat (pytest) |
+| Nama skenario tidak dikenal | Permintaan ditolak | `POST /dev/scenario/{name}`, 404 `SCENARIO_NOT_FOUND` | Tidak dimodelkan (validasi teknis) | [TODO: bukti SCENARIO_NOT_FOUND] |
+| Nilai sensor di luar 2–400 cm | Slot menjadi UNKNOWN, LED OFF, keluar dari rekomendasi, dihitung pada `unknown`, muncul di peringatan *dashboard* | `PUT /slots/{slot_id}/status`, 200 dengan `anomaly: "OUT_OF_RANGE"` | "AI cek anomali pembacaan sensor" (OUT_OF_RANGE) | TC-05 (pytest); `dashboard/tc05_dashboard_2026-11-24.txt`; [TODO: bukti log runner TC-05 simulator] |
+| Sensor tidak melapor lebih dari 60 detik | Slot menjadi UNKNOWN, LED OFF, keluar dari rekomendasi, muncul di peringatan *dashboard* | Terlihat pada `GET /slots` dan `GET /occupancy/floors` | "Periksa lastUpdate tiap slot & masa tanda kuning"; "Tandai UNKNOWN, LED OFF, keluarkan dari rekomendasi" | TC-05 (pytest); `dashboard/tc05_dashboard_2026-11-24.txt`; `dashboard/tc05_dashboard_unknown.png`; [TODO: bukti log runner TC-05 mode stale] |
+| Gagal menyimpan ke basis data | Transaksi dibatalkan (*rollback*), status slot tidak berubah | `PUT /slots/{slot_id}/status`, 500 `DB_UPDATE_FAILED` | Kejadian "Gagal simpan DB" pada "Tentukan status dari jarak & simpan" | [TODO: bukti DB_UPDATE_FAILED; belum ada skenario uji] |
+| Slot rekomendasi terisi motor lain | Tanda kuning berakhir, LED berubah merah | `PUT /slots/{slot_id}/status`, 200 | "Slot masih kosong?" (tidak); "Slot terisi: pilih slot lain ber-LED hijau" | TC-04 (pytest, LED merah saat OCCUPIED); [TODO: bukti slot kuning berubah merah saat terisi] |
+| Rentang jam prediksi salah | *Dashboard* menampilkan kode dan pesan galat; grafik sebelumnya dipertahankan dengan keterangan | `GET /ai/predictions/occupancy`, 400 `INVALID_TIME_WINDOW` | "Rentang jam valid?" (tidak) | TC-06 (pytest); `dashboard/tc06_invalid_window.png` |
+| Pembayaran keluar gagal | Tidak diimplementasikan | — | "Pembayaran berhasil?" (tidak); "Petugas tangani pembayaran (sistem lama)" | Di luar lingkup prototipe |
+
+Keterangan bukti: "pytest" merujuk pada fungsi uji di `tests/api_tests/test_tc_api.py`, dengan hasil 13 tes lulus pada `tests/evidence/api-pytest-run.png`. Berkas berawalan `dashboard/` berada di `tests/evidence/dashboard/`.
+
+Galat pada sisi gerbang dirancang agar pengemudi dengan kartu valid tidak tertahan. Respons 200 dengan `recommendation: null` dan respons 500 `RECOMMENDATION_FAILED` sama-sama membawa `gateAction: "OPEN_BARRIER"`, sehingga halaman gerbang membuka palang dan menampilkan ketersediaan per lantai. Hanya kartu yang tidak terdaftar yang membuat palang tetap tertutup.
+
+Galat pada sisi sensor tidak ditolak, tetapi diubah menjadi status UNKNOWN. Dengan cara ini, slot bermasalah tetap terlihat oleh pengelola sebagai peringatan, tidak terhitung sebagai slot tersedia, dan tidak pernah dipilih oleh rekomendasi. Galat teknis seperti 404 dan `INVALID_REQUEST` tidak dimodelkan di BPMN karena hanya menyangkut validasi format permintaan.
