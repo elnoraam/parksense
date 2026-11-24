@@ -1,3 +1,20 @@
+"""Menjalankan ulang TC-01 s.d. TC-09 terhadap backend yang sedang berjalan.
+
+Dipakai saat demo dan untuk mengumpulkan bukti uji. Berbeda dengan
+tests/api_tests (pytest + database di memori), skrip ini memanggil server
+sungguhan lewat HTTP, jadi backend harus dinyalakan dulu:
+
+    python -m uvicorn backend.main:app --port 8000
+    python tests/run_all.py            # semua TC
+    python tests/run_all.py TC-01 TC-06  # hanya TC tertentu
+
+Hasil (Lulus/Gagal + respons JSON) dicetak ke layar dan disimpan ke
+tests/evidence/run_all_<waktu>.log.
+
+Catatan: skrip ini mengubah data di database lokal (memakai /dev/scenario),
+dan di akhir selalu memulihkan kondisi dengan scenario `reset` serta
+mematikan fault rekomendasi.
+"""
 import json
 import os
 import sys
@@ -7,7 +24,9 @@ from datetime import datetime
 from pathlib import Path
 
 # --- Konfigurasi (satu tempat) ---
-BASE = os.environ.get("PARKSENSE_URL", "http://localhost:8000") + "/api/v1"
+# PARKSENSE_URL sama dengan yang dipakai simulator; boleh dengan atau tanpa /api/v1
+_url = os.environ.get("PARKSENSE_URL", "http://127.0.0.1:8000").rstrip("/")
+BASE = _url if _url.endswith("/api/v1") else _url + "/api/v1"
 DEVICE = {"X-Device-Key": "parksense-dev-key"}
 DASH = {"Authorization": "Bearer dev-dashboard-token"}
 VALID_CARD = "RFID-04A1B7C2"
