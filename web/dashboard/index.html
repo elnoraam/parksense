@@ -41,6 +41,34 @@
   .card { background: #fff; border-radius: 14px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
   h2 { margin: 0 0 14px; font-size: 23px; color: var(--blue); }
   .muted { color: var(--muted); }
+
+  /* B. Ringkasan + kartu lantai */
+  .summary { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
+  .sum { flex: 1; min-width: 150px; background: var(--blue-soft); border-radius: 12px; padding: 12px 16px; }
+  .sum b { display: block; font-size: 34px; line-height: 1.1; }
+  .sum span { font-size: 16px; color: var(--muted); }
+  .sum.avail b { color: var(--ok); }
+  .sum.occ b { color: var(--pink); }
+  .sum.unk b { color: #6b7280; }
+  .floor-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; }
+  .floor { border: 3px solid var(--blue-soft); border-radius: 14px; padding: 18px; }
+  .floor-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .floor-head h3 { margin: 0; font-size: 26px; }
+  .tag { font-size: 15px; font-weight: 700; padding: 4px 12px; border-radius: 999px; }
+  .tag.open { background: var(--ok-soft); color: var(--ok); }
+  .tag.closed { background: #374151; color: #fff; }
+  .pct { font-size: 44px; font-weight: 800; }
+  .pct small { font-size: 18px; font-weight: 600; color: var(--muted); }
+  .bar { height: 22px; background: #e5e7eb; border-radius: 999px; overflow: hidden; margin: 6px 0 14px; }
+  .bar div { height: 100%; border-radius: 999px; transition: width .4s; }
+  .bar .low { background: var(--blue); }
+  .bar .mid { background: var(--warn); }
+  .bar .high { background: var(--pink); }
+  .counts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
+  .counts div { background: var(--bg); border-radius: 10px; padding: 8px 4px; }
+  .counts b { display: block; font-size: 28px; }
+  .counts span { font-size: 15px; color: var(--muted); }
+  .floor.closed { opacity: .5; filter: grayscale(.8); border-style: dashed; }
 </style>
 </head>
 <body>
@@ -179,15 +207,76 @@ function setUpdated(generatedAt) {
   $("updated").textContent = "Terakhir diperbarui: " + formatWib(generatedAt);
 }
 
-// Tahap 1: satu kali cek koneksi saat halaman dibuka (refresh berkala menyusul).
-async function checkConnection() {
-  const res = await apiGet("/occupancy/floors");
-  setConnection(res.status !== 0);
-  if (res.ok) setUpdated(res.data.generatedAt);
+// ===== B. Kartu okupansi per lantai (GET /occupancy/floors) =====
+function occupiedPercent(f) {
+  return f.total > 0 ? Math.round(f.occupied / f.total * 100) : 0;
+}
+
+// Warna bar: < 70% biru, 70–84% oranye, >= 85% merah muda
+function barClass(pct) {
+  if (pct >= 85) return "high";
+  if (pct >= 70) return "mid";
+  return "low";
+}
+
+function renderFloors(floors) {
+  const sorted = [...floors].sort((a, b) => a.floorNumber - b.floorNumber);
+  // Ringkasan semua lantai (unknown tetap dihitung terpisah)
+  const sum = (key) => sorted.reduce((n, f) => n + f[key], 0);
+  const summary = `
+    <div class="summary">
+      <div class="sum"><b>${sum("total")}</b><span>total slot</span></div>
+      <div class="sum avail"><b>${sum("available")}</b><span>kosong</span></div>
+      <div class="sum occ"><b>${sum("occupied")}</b><span>terisi</span></div>
+      <div class="sum unk"><b>${sum("unknown")}</b><span>tidak diketahui</span></div>
+    </div>`;
+
+  const cards = sorted.map((f) => {
+    const pct = occupiedPercent(f);
+    return `
+      <div class="floor ${f.isOpen ? "" : "closed"}">
+        <div class="floor-head">
+          <h3>Lantai ${f.floorNumber}</h3>
+          <span class="tag ${f.isOpen ? "open" : "closed"}">${f.isOpen ? "DIBUKA" : "DITUTUP"}</span>
+        </div>
+        <div class="pct">${pct}% <small>terisi (${f.occupied}/${f.total})</small></div>
+        <div class="bar"><div class="${barClass(pct)}" style="width:${pct}%"></div></div>
+        <div class="counts">
+          <div><b style="color:var(--ok)">${f.available}</b><span>kosong</span></div>
+          <div><b style="color:var(--pink)">${f.occupied}</b><span>terisi</span></div>
+          <div><b style="color:#6b7280">${f.unknown}</b><span>tidak diketahui</span></div>
+        </div>
+      </div>`;
+  }).join("");
+
+  $("floors").className = "";
+  $("floors").innerHTML = summary + `<div class="floor-grid">${cards}</div>`;
+}
+
+// ===== Refresh berkala (tiap REFRESH_MS) =====
+let refreshing = false; // penjaga: siklus baru tidak dimulai sebelum yang lama selesai
+
+async function refreshLive() {
+  if (refreshing) return;
+  refreshing = true;
+  try {
+    const res = await apiGet("/occupancy/floors");
+    setConnection(res.status !== 0);
+    if (res.ok) {
+      renderFloors(res.data.floors);
+      setUpdated(res.data.generatedAt);
+    }
+    // Bila gagal, data terakhir tetap tampil; dicoba lagi di siklus berikutnya.
+  } catch (err) {
+    console.error(err); // jangan sampai halaman berhenti karena satu galat
+  } finally {
+    refreshing = false;
+  }
 }
 
 if (USE_MOCK) $("mockNote").classList.add("show");
-checkConnection();
+refreshLive();
+setInterval(refreshLive, REFRESH_MS);
 </script>
 </body>
 </html>
