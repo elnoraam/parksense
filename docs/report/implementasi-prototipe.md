@@ -411,12 +411,14 @@ Tabel 3.8.1 Pemetaan aktivitas BPMN To-Be ke prototipe dan SoaML
 | Pool / lane | Aktivitas BPMN To-Be | Komponen dan endpoint | Operasi SoaML | Masalah | Realisasi |
 |---|---|---|---|---|---|
 | Pengemudi | Tap kartu di pembaca | Smart Gate, isian `cardId` | — (aktivitas pengemudi) | P1 | Penuh, pembaca kartu disimulasikan |
-| Pengemudi | Lihat informasi di layar gerbang | Smart Gate, layar gerbang | — (aktivitas pengemudi) | P1 | Penuh |
+| Pengemudi | Lihat informasi di layar gerbang; Hasil di layar? | Smart Gate, layar gerbang | — (aktivitas pengemudi) | P1 | Penuh |
 | Pengemudi | Menuju slot ikuti lampu LED | LED virtual pada peta slot dan panel simulator | — (aktivitas pengemudi) | P2 | Penuh, LED disimulasikan |
 | Pengemudi | Slot terisi: pilih slot lain ber-LED hijau | LED virtual hijau dan merah | — (aktivitas pengemudi) | P2 | Penuh, LED disimulasikan |
 | Pengemudi | Cari slot LED hijau sesuai info per lantai / arahan petugas | Smart Gate, ketersediaan per lantai | — (aktivitas pengemudi) | P1 | Penuh |
+| Pengemudi | Hubungi petugas gerbang | — | — (aktivitas pengemudi) | — | Di luar sistem, aktivitas manual saat kartu ditolak |
 | Pengemudi | Tap & bayar keluar; Keluar setelah palang terbuka | — | — (aktivitas pengemudi) | — | Di luar lingkup prototipe |
 | Gerbang Pintar | Baca kartu & minta rekomendasi | Smart Gate, `POST /gate/entry-tap` | `AccessService.validateUserCard()`, `RecommendationService.requestRecommendation()` | P1 | Penuh |
+| Gerbang Pintar | *Event-based gateway*: Rekomendasi diterima / Rekomendasi tidak tersedia / Kartu tidak valid / > 3 dtk tanpa respons | Smart Gate, percabangan menurut status respons `entry-tap` (200, 200 dengan `null` atau 500, dan 400) | Aktivitas internal SmartGateParticipant | P1 | Sebagian, cabang timer tidak ada |
 | Gerbang Pintar | Buka palang, siapkan info lantai & slot; Tampilkan di layar gerbang | Smart Gate, respons `entry-tap` dan `GET /occupancy/floors` | `RecommendationService.recommendationReady()`, `OccupancyQueryService.getFloorOccupancy()` | P1 | Penuh |
 | Gerbang Pintar | Buka palang, siapkan info ketersediaan per lantai | Smart Gate, `floors` pada respons 500 atau `GET /occupancy/floors` | Aktivitas internal SmartGateParticipant | P1 | Penuh |
 | Gerbang Pintar | Palang tetap tertutup, siapkan pesan penolakan | Smart Gate, respons 400 `INVALID_CARD` | Aktivitas internal SmartGateParticipant | — | Penuh |
