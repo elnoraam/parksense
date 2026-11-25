@@ -6,8 +6,9 @@ Bisa ditimpa lewat variabel lingkungan tanpa mengubah kode.
 """
 import os
 
-# Alamat dasar REST API backend (kontrak: http://localhost:8000/api/v1)
-BASE_URL = os.environ.get("PARKSENSE_URL", "http://localhost:8000/api/v1").rstrip("/")
+# Alamat dasar REST API backend (kontrak: http://localhost:8000/api/v1).
+# Bawaan memakai 127.0.0.1 (bukan localhost) agar tidak mencoba IPv6 (::1) dulu, sehingga lebih cepat.
+BASE_URL = os.environ.get("PARKSENSE_URL", "http://127.0.0.1:8000/api/v1").rstrip("/")
 
 # Kunci perangkat untuk header X-Device-Key (gateway IoT = perangkat)
 DEVICE_KEY = os.environ.get("PARKSENSE_DEVICE_KEY", "parksense-dev-key")
