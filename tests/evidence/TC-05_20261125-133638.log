@@ -1,0 +1,27 @@
+[2026-11-25T13:36:38+07:00] === TC-05: Sensor bermasalah (mode stale) ===
+[2026-11-25T13:36:38+07:00] Base URL : http://127.0.0.1:8000/api/v1
+[2026-11-25T13:36:38+07:00] --- Varian stale: sensor berhenti melapor ---
+[2026-11-25T13:36:38+07:00] LANGKAH  POST /dev/scenario/reset
+[2026-11-25T13:36:38+07:00] HTTP     POST /dev/scenario/reset -> 200 {"scenario": "reset", "applied": true}
+[2026-11-25T13:36:38+07:00] LULUS    scenario reset dimuat (200) (HTTP 200)
+[2026-11-25T13:36:38+07:00] LANGKAH  Sensor F1-A07 dan F1-A08 melapor terisi
+[2026-11-25T13:36:38+07:00] [13:36:38] F1-A07 15.1 cm -> OCCUPIED LED RED
+[2026-11-25T13:36:38+07:00] [13:36:38] F1-A08 22.6 cm -> OCCUPIED LED RED
+[2026-11-25T13:36:38+07:00] LANGKAH  stop F1-A07; heartbeat tiap 20 dtk tetap berjalan untuk F1-A08
+[2026-11-25T13:36:38+07:00] [13:36:38] F1-A07 berhenti melapor; backend menandai UNKNOWN setelah > 60 dtk
+[2026-11-25T13:36:38+07:00] LANGKAH  Menunggu 65 dtk (> STALE_SECONDS=60)
+[2026-11-25T13:37:43+07:00] Heartbeat terkirim 3 putaran selama menunggu
+[2026-11-25T13:37:43+07:00] HTTP     GET /slots (F1-A07) -> 200 {"slotId": "F1-A07", "floorNumber": 1, "status": "UNKNOWN", "ledColor": "OFF", "lastUpdate": "2026-11-25T13:36:38+07:00"}
+[2026-11-25T13:37:43+07:00] LULUS    F1-A07 status UNKNOWN (UNKNOWN)
+[2026-11-25T13:37:43+07:00] LULUS    F1-A07 LED OFF (OFF)
+[2026-11-25T13:37:43+07:00] HTTP     GET /occupancy/floors -> 200 {"floors": [{"floorNumber": 1, "isOpen": true, "total": 20, "available": 18, "occupied": 1, "unknown": 1}, {"floorNumber": 2, "isOpen": false, "total": 20, "available": 20, "occupied": 0, "unknown": 0}], "generatedAt": "2026-11-25T13:37:43+07:00"}
+[2026-11-25T13:37:43+07:00] LULUS    lantai 1 menghitung unknown terpisah (unknown=1)
+[2026-11-25T13:37:43+07:00] LULUS    jumlah unknown = jumlah slot UNKNOWN di GET /slots (1 vs 1)
+[2026-11-25T13:37:43+07:00] LULUS    available+occupied+unknown = total
+[2026-11-25T13:37:43+07:00] HTTP     GET /slots (F1-A08) -> 200 {"slotId": "F1-A08", "floorNumber": 1, "status": "OCCUPIED", "ledColor": "RED", "lastUpdate": "2026-11-25T13:37:38+07:00"}
+[2026-11-25T13:37:43+07:00] LULUS    F1-A08 tetap OCCUPIED berkat heartbeat (status=OCCUPIED ledColor=RED)
+[2026-11-25T13:37:43+07:00] LANGKAH  POST /gate/entry-tap (kartu valid)
+[2026-11-25T13:37:43+07:00] HTTP     POST /gate/entry-tap -> 200 {"recommendation": {"floorNumber": 1, "slotId": "F1-A01"}, "gateAction": "OPEN_BARRIER", "displayMessage": "Lantai 1 - Slot F1-A01"}
+[2026-11-25T13:37:43+07:00] LULUS    slot bermasalah tidak direkomendasikan (rekomendasi=F1-A01)
+[2026-11-25T13:37:43+07:00] HASIL    TC-05: LULUS (8/8 cek)
+[2026-11-25T13:37:43+07:00] Log bukti: /Users/maizhar1/parksense/tests/evidence/TC-05_20261125-133638.log
