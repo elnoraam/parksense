@@ -122,19 +122,21 @@ def tc03():
 
 
 def tc04():
-    before = floor(2)["available"]
-    log(f"  available lantai 2 awal = {before}")
-    status, body = call("PUT", "/slots/F2-A17/status", DEVICE, status_body("OCCUPIED", 18.4, floor_no=2))
-    show("PUT F2-A17 OCCUPIED", status, body)
+    # Slot lantai 1 (lantai 1 selalu dibuka; sama dengan slot bawaan runner simulator)
+    slot_id = "F1-A05"
+    before = floor(1)["available"]
+    log(f"  available lantai 1 awal = {before}")
+    status, body = call("PUT", f"/slots/{slot_id}/status", DEVICE, status_body("OCCUPIED", 18.4, floor_no=1))
+    show(f"PUT {slot_id} OCCUPIED", status, body)
     assert status == 200 and body["ledCommand"]["color"] == "RED"
-    after_park = floor(2)["available"]
-    log(f"  available lantai 2 setelah parkir = {after_park}")
+    after_park = floor(1)["available"]
+    log(f"  available lantai 1 setelah parkir = {after_park}")
     assert after_park == before - 1
-    status, body = call("PUT", "/slots/F2-A17/status", DEVICE, status_body("AVAILABLE", 150, floor_no=2))
-    show("PUT F2-A17 AVAILABLE", status, body)
+    status, body = call("PUT", f"/slots/{slot_id}/status", DEVICE, status_body("AVAILABLE", 150, floor_no=1))
+    show(f"PUT {slot_id} AVAILABLE", status, body)
     assert status == 200 and body["ledCommand"]["color"] == "GREEN"
-    after_exit = floor(2)["available"]
-    log(f"  available lantai 2 setelah keluar = {after_exit}")
+    after_exit = floor(1)["available"]
+    log(f"  available lantai 1 setelah keluar = {after_exit}")
     assert after_exit == before
 
 

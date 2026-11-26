@@ -1,0 +1,46 @@
+[2026-11-25T05:12:34+07:00] === TC-04: Motor parkir lalu keluar ===
+[2026-11-25T05:12:34+07:00] Base URL : http://127.0.0.1:8000/api/v1
+[2026-11-25T05:12:34+07:00] LANGKAH  POST /dev/scenario/reset
+[2026-11-25T05:12:34+07:00] HTTP     POST /dev/scenario/reset -> 200 {"scenario": "reset", "applied": true}
+[2026-11-25T05:12:34+07:00] LULUS    scenario reset dimuat (200) (HTTP 200)
+[2026-11-25T05:12:34+07:00] LANGKAH  GET /occupancy/floors (kondisi awal)
+[2026-11-25T05:12:34+07:00] HTTP     GET /occupancy/floors -> 200 {"floors": [{"floorNumber": 1, "isOpen": true, "total": 20, "available": 20, "occupied": 0, "unknown": 0}, {"floorNumber": 2, "isOpen": false, "total": 20, "available": 20, "occupied": 0, "unknown": 0}], "generatedAt": "2026-11-25T05:12:34+07:00"}
+[2026-11-25T05:12:34+07:00] Lantai 1 awal: available=20 occupied=0
+[2026-11-25T05:12:34+07:00] LANGKAH  PUT /slots/F1-A05/status jarak 15 cm (motor parkir)
+[2026-11-25T05:12:34+07:00] [05:12:34] F1-A05 15.0 cm -> OCCUPIED LED RED
+[2026-11-25T05:12:34+07:00] HTTP     PUT /slots/F1-A05/status -> 200 {"slotId": "F1-A05", "currentStatus": "OCCUPIED", "ledCommand": {"color": "RED", "sent": true}}
+[2026-11-25T05:12:34+07:00] LULUS    PUT OCCUPIED -> 200 (HTTP 200)
+[2026-11-25T05:12:34+07:00] LULUS    currentStatus OCCUPIED (OCCUPIED)
+[2026-11-25T05:12:34+07:00] LULUS    ledCommand.color RED ({'color': 'RED', 'sent': True})
+[2026-11-25T05:12:34+07:00] HTTP     GET /slots (F1-A05) -> 200 {"slotId": "F1-A05", "floorNumber": 1, "status": "OCCUPIED", "ledColor": "RED", "lastUpdate": "2026-11-25T05:12:34+07:00"}
+[2026-11-25T05:12:34+07:00] LULUS    GET /slots: LED merah (status=OCCUPIED ledColor=RED)
+[2026-11-25T05:12:34+07:00] HTTP     GET /occupancy/floors -> 200 {"floorNumber": 1, "isOpen": true, "total": 20, "available": 19, "occupied": 1, "unknown": 0}
+[2026-11-25T05:12:34+07:00] LULUS    available lantai 1 berkurang 1 (20 -> 19)
+[2026-11-25T05:12:34+07:00] LULUS    occupied lantai 1 bertambah 1 (0 -> 1)
+[2026-11-25T05:12:34+07:00] Panel LED:
+Lantai 1 [BUKA]
+  A01:G A02:G A03:G A04:G A05:R A06:G A07:G A08:G A09:G A10:G
+  A11:G A12:G A13:G A14:G A15:G A16:G A17:G A18:G A19:G A20:G
+Lantai 2 [TUTUP]
+  A01:G A02:G A03:G A04:G A05:G A06:G A07:G A08:G A09:G A10:G
+  A11:G A12:G A13:G A14:G A15:G A16:G A17:G A18:G A19:G A20:G
+  Keterangan: G=AVAILABLE R=OCCUPIED Y=rekomendasi -=UNKNOWN/OFF
+[2026-11-25T05:12:34+07:00] LANGKAH  PUT /slots/F1-A05/status jarak 150 cm (motor keluar)
+[2026-11-25T05:12:35+07:00] [05:12:35] F1-A05 150.0 cm -> AVAILABLE LED GREEN
+[2026-11-25T05:12:35+07:00] HTTP     PUT /slots/F1-A05/status -> 200 {"slotId": "F1-A05", "currentStatus": "AVAILABLE", "ledCommand": {"color": "GREEN", "sent": true}}
+[2026-11-25T05:12:35+07:00] LULUS    PUT AVAILABLE -> 200 (HTTP 200)
+[2026-11-25T05:12:35+07:00] LULUS    ledCommand.color GREEN ({'color': 'GREEN', 'sent': True})
+[2026-11-25T05:12:35+07:00] HTTP     GET /slots (F1-A05) -> 200 {"slotId": "F1-A05", "floorNumber": 1, "status": "AVAILABLE", "ledColor": "GREEN", "lastUpdate": "2026-11-25T05:12:35+07:00"}
+[2026-11-25T05:12:35+07:00] LULUS    GET /slots: LED hijau (status=AVAILABLE ledColor=GREEN)
+[2026-11-25T05:12:35+07:00] HTTP     GET /occupancy/floors -> 200 {"floorNumber": 1, "isOpen": true, "total": 20, "available": 20, "occupied": 0, "unknown": 0}
+[2026-11-25T05:12:35+07:00] LULUS    available lantai 1 kembali (19 -> 20)
+[2026-11-25T05:12:35+07:00] Panel LED:
+Lantai 1 [BUKA]
+  A01:G A02:G A03:G A04:G A05:G A06:G A07:G A08:G A09:G A10:G
+  A11:G A12:G A13:G A14:G A15:G A16:G A17:G A18:G A19:G A20:G
+Lantai 2 [TUTUP]
+  A01:G A02:G A03:G A04:G A05:G A06:G A07:G A08:G A09:G A10:G
+  A11:G A12:G A13:G A14:G A15:G A16:G A17:G A18:G A19:G A20:G
+  Keterangan: G=AVAILABLE R=OCCUPIED Y=rekomendasi -=UNKNOWN/OFF
+[2026-11-25T05:12:35+07:00] HASIL    TC-04: LULUS (11/11 cek)
+[2026-11-25T05:12:35+07:00] Log bukti: C:\Users\indah\parksense\tests\evidence\TC-04_20261125-051234.log

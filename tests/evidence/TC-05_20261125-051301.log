@@ -1,0 +1,69 @@
+[2026-11-25T05:13:01+07:00] === TC-05: Sensor bermasalah (mode all) ===
+[2026-11-25T05:13:01+07:00] Base URL : http://127.0.0.1:8000/api/v1
+[2026-11-25T05:13:01+07:00] --- Varian glitch: sensor mengirim 500 cm ---
+[2026-11-25T05:13:01+07:00] LANGKAH  POST /dev/scenario/all_full
+[2026-11-25T05:13:01+07:00] HTTP     POST /dev/scenario/all_full -> 200 {"scenario": "all_full", "applied": true}
+[2026-11-25T05:13:01+07:00] LULUS    scenario all_full dimuat (200) (HTTP 200)
+[2026-11-25T05:13:01+07:00] LANGKAH  PUT F2-A10 150 cm (slot sehat, kosong)
+[2026-11-25T05:13:01+07:00] [05:13:01] F2-A10 150.0 cm -> AVAILABLE LED GREEN
+[2026-11-25T05:13:01+07:00] HTTP     PUT /slots/F2-A10/status -> 200 {"slotId": "F2-A10", "currentStatus": "AVAILABLE", "ledCommand": {"color": "GREEN", "sent": true}}
+[2026-11-25T05:13:01+07:00] LANGKAH  PUT F2-A11 500 cm (sensor rusak)
+[2026-11-25T05:13:01+07:00] [05:13:01] F2-A11 500.0 cm -> UNKNOWN LED OFF anomaly=OUT_OF_RANGE
+[2026-11-25T05:13:01+07:00] HTTP     PUT /slots/F2-A11/status -> 200 {"slotId": "F2-A11", "currentStatus": "UNKNOWN", "ledCommand": {"color": "OFF", "sent": true}, "anomaly": "OUT_OF_RANGE"}
+[2026-11-25T05:13:01+07:00] LULUS    PUT 500 cm -> 200 (HTTP 200)
+[2026-11-25T05:13:01+07:00] LULUS    anomaly OUT_OF_RANGE (OUT_OF_RANGE)
+[2026-11-25T05:13:01+07:00] LULUS    currentStatus UNKNOWN (UNKNOWN)
+[2026-11-25T05:13:01+07:00] LULUS    ledCommand.color OFF ({'color': 'OFF', 'sent': True})
+[2026-11-25T05:13:01+07:00] HTTP     GET /slots (F2-A11) -> 200 {"slotId": "F2-A11", "floorNumber": 2, "status": "UNKNOWN", "ledColor": "OFF", "lastUpdate": "2026-11-25T05:13:01+07:00"}
+[2026-11-25T05:13:01+07:00] LULUS    F2-A11 status UNKNOWN (UNKNOWN)
+[2026-11-25T05:13:01+07:00] LULUS    F2-A11 LED OFF (OFF)
+[2026-11-25T05:13:01+07:00] HTTP     GET /occupancy/floors -> 200 {"floors": [{"floorNumber": 1, "isOpen": true, "total": 20, "available": 0, "occupied": 20, "unknown": 0}, {"floorNumber": 2, "isOpen": true, "total": 20, "available": 1, "occupied": 18, "unknown": 1}], "generatedAt": "2026-11-25T05:13:01+07:00"}
+[2026-11-25T05:13:01+07:00] LULUS    lantai 2 menghitung unknown terpisah (unknown=1)
+[2026-11-25T05:13:01+07:00] LULUS    jumlah unknown = jumlah slot UNKNOWN di GET /slots (1 vs 1)
+[2026-11-25T05:13:01+07:00] LULUS    available+occupied+unknown = total
+[2026-11-25T05:13:01+07:00] LANGKAH  POST /gate/entry-tap (kartu valid)
+[2026-11-25T05:13:01+07:00] HTTP     POST /gate/entry-tap -> 200 {"recommendation": {"floorNumber": 2, "slotId": "F2-A10"}, "gateAction": "OPEN_BARRIER", "displayMessage": "Lantai 2 - Slot F2-A10"}
+[2026-11-25T05:13:01+07:00] LULUS    slot bermasalah tidak direkomendasikan (rekomendasi=F2-A10)
+[2026-11-25T05:13:01+07:00] LULUS    rekomendasi jatuh ke satu-satunya slot sehat (F2-A10) (rekomendasi=F2-A10)
+[2026-11-25T05:13:01+07:00] --- Varian scenario: POST /dev/scenario/sensor_stale ---
+[2026-11-25T05:13:01+07:00] LANGKAH  POST /dev/scenario/sensor_stale
+[2026-11-25T05:13:01+07:00] HTTP     POST /dev/scenario/sensor_stale -> 200 {"scenario": "sensor_stale", "applied": true}
+[2026-11-25T05:13:01+07:00] LULUS    scenario sensor_stale dimuat (200) (HTTP 200)
+[2026-11-25T05:13:01+07:00] HTTP     GET /slots (hanya UNKNOWN) -> 200 [{"slotId": "F1-A05", "floorNumber": 1, "status": "UNKNOWN", "ledColor": "OFF", "lastUpdate": "2026-11-25T05:02:01+07:00"}, {"slotId": "F1-A06", "floorNumber": 1, "status": "UNKNOWN", "ledColor": "OFF", "lastUpdate": "2026-11-25T05:02:01+07:00"}]
+[2026-11-25T05:13:01+07:00] LULUS    ada slot UNKNOWN setelah sensor_stale (2 slot)
+[2026-11-25T05:13:01+07:00] LULUS    semua slot UNKNOWN ber-LED OFF
+[2026-11-25T05:13:01+07:00] HTTP     GET /slots (F1-A05) -> 200 {"slotId": "F1-A05", "floorNumber": 1, "status": "UNKNOWN", "ledColor": "OFF", "lastUpdate": "2026-11-25T05:02:01+07:00"}
+[2026-11-25T05:13:01+07:00] LULUS    F1-A05 status UNKNOWN (UNKNOWN)
+[2026-11-25T05:13:01+07:00] LULUS    F1-A05 LED OFF (OFF)
+[2026-11-25T05:13:01+07:00] HTTP     GET /occupancy/floors -> 200 {"floors": [{"floorNumber": 1, "isOpen": true, "total": 20, "available": 18, "occupied": 0, "unknown": 2}, {"floorNumber": 2, "isOpen": false, "total": 20, "available": 20, "occupied": 0, "unknown": 0}], "generatedAt": "2026-11-25T05:13:01+07:00"}
+[2026-11-25T05:13:01+07:00] LULUS    lantai 1 menghitung unknown terpisah (unknown=2)
+[2026-11-25T05:13:01+07:00] LULUS    jumlah unknown = jumlah slot UNKNOWN di GET /slots (2 vs 2)
+[2026-11-25T05:13:01+07:00] LULUS    available+occupied+unknown = total
+[2026-11-25T05:13:01+07:00] LANGKAH  POST /gate/entry-tap (kartu valid)
+[2026-11-25T05:13:01+07:00] HTTP     POST /gate/entry-tap -> 200 {"recommendation": {"floorNumber": 1, "slotId": "F1-A01"}, "gateAction": "OPEN_BARRIER", "displayMessage": "Lantai 1 - Slot F1-A01"}
+[2026-11-25T05:13:01+07:00] LULUS    slot bermasalah tidak direkomendasikan (rekomendasi=F1-A01)
+[2026-11-25T05:13:01+07:00] --- Varian stale: sensor berhenti melapor ---
+[2026-11-25T05:13:01+07:00] LANGKAH  POST /dev/scenario/reset
+[2026-11-25T05:13:01+07:00] HTTP     POST /dev/scenario/reset -> 200 {"scenario": "reset", "applied": true}
+[2026-11-25T05:13:01+07:00] LULUS    scenario reset dimuat (200) (HTTP 200)
+[2026-11-25T05:13:01+07:00] LANGKAH  Sensor F1-A07 dan F1-A08 melapor terisi
+[2026-11-25T05:13:01+07:00] [05:13:01] F1-A07 19.5 cm -> OCCUPIED LED RED
+[2026-11-25T05:13:01+07:00] [05:13:01] F1-A08 12.1 cm -> OCCUPIED LED RED
+[2026-11-25T05:13:01+07:00] LANGKAH  stop F1-A07; heartbeat tiap 20 dtk tetap berjalan untuk F1-A08
+[2026-11-25T05:13:01+07:00] [05:13:01] F1-A07 berhenti melapor; backend menandai UNKNOWN setelah > 60 dtk
+[2026-11-25T05:13:01+07:00] LANGKAH  Menunggu 65 dtk (> STALE_SECONDS=60)
+[2026-11-25T05:14:06+07:00] Heartbeat terkirim 3 putaran selama menunggu
+[2026-11-25T05:14:06+07:00] HTTP     GET /slots (F1-A07) -> 200 {"slotId": "F1-A07", "floorNumber": 1, "status": "UNKNOWN", "ledColor": "OFF", "lastUpdate": "2026-11-25T05:13:01+07:00"}
+[2026-11-25T05:14:06+07:00] LULUS    F1-A07 status UNKNOWN (UNKNOWN)
+[2026-11-25T05:14:06+07:00] LULUS    F1-A07 LED OFF (OFF)
+[2026-11-25T05:14:06+07:00] HTTP     GET /occupancy/floors -> 200 {"floors": [{"floorNumber": 1, "isOpen": true, "total": 20, "available": 18, "occupied": 1, "unknown": 1}, {"floorNumber": 2, "isOpen": false, "total": 20, "available": 20, "occupied": 0, "unknown": 0}], "generatedAt": "2026-11-25T05:14:06+07:00"}
+[2026-11-25T05:14:06+07:00] LULUS    lantai 1 menghitung unknown terpisah (unknown=1)
+[2026-11-25T05:14:06+07:00] LULUS    jumlah unknown = jumlah slot UNKNOWN di GET /slots (1 vs 1)
+[2026-11-25T05:14:06+07:00] LULUS    available+occupied+unknown = total
+[2026-11-25T05:14:06+07:00] HTTP     GET /slots (F1-A08) -> 200 {"slotId": "F1-A08", "floorNumber": 1, "status": "OCCUPIED", "ledColor": "RED", "lastUpdate": "2026-11-25T05:14:01+07:00"}
+[2026-11-25T05:14:06+07:00] LULUS    F1-A08 tetap OCCUPIED berkat heartbeat (status=OCCUPIED ledColor=RED)
+[2026-11-25T05:14:06+07:00] LANGKAH  POST /gate/entry-tap (kartu valid)
+[2026-11-25T05:14:06+07:00] HTTP     POST /gate/entry-tap -> 200 {"recommendation": {"floorNumber": 1, "slotId": "F1-A01"}, "gateAction": "OPEN_BARRIER", "displayMessage": "Lantai 1 - Slot F1-A01"}
+[2026-11-25T05:14:06+07:00] LULUS    slot bermasalah tidak direkomendasikan (rekomendasi=F1-A01)
+[2026-11-25T05:14:06+07:00] HASIL    TC-05: LULUS (29/29 cek)
+[2026-11-25T05:14:06+07:00] Log bukti: C:\Users\indah\parksense\tests\evidence\TC-05_20261125-051301.log
