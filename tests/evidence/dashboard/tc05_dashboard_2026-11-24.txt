@@ -1,0 +1,382 @@
+ParkSense — bukti uji TC-05 (sisi dashboard): sensor bermasalah -> UNKNOWN, LED OFF, dihitung terpisah, peringatan
+Dibuat      : 2026-11-24T21:58:40+07:00
+Backend     : python -m uvicorn backend.main:app --reload --port 8000
+Dashboard   : http://localhost:8000/web/dashboard/index.html
+GET /health : {"status":"ok","ai":{"recommend_slot":"fallback","predict_occupancy":"fallback","make_advisory":"fallback","detect_anomaly":"fallback","status_from_distance":"fallback","load_history":"fallback"}}
+Catatan     : 'Tampilan dashboard' = hasil menjalankan <script> web/dashboard/index.html
+              terhadap backend yang sama (DOM tiruan di Node), bukan tangkapan layar.
+==================================================================
+
+--- [2026-11-24T21:58:40+07:00] Muat skenario sensor_stale
+$ curl.exe -s -X POST -H "X-Device-Key: parksense-dev-key" "http://localhost:8000/api/v1/dev/scenario/sensor_stale"
+HTTP 200
+{
+  "scenario": "sensor_stale",
+  "applied": true
+}
+
+--- [2026-11-24T21:58:41+07:00] GET /slots (sumber daftar peringatan dashboard)
+$ curl.exe -s -X GET -H "Authorization: Bearer dev-dashboard-token" "http://localhost:8000/api/v1/slots"
+HTTP 200
+{
+  "slots": [
+    {
+      "slotId": "F1-A01",
+      "floorNumber": 1,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F1-A02",
+      "floorNumber": 1,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F1-A03",
+      "floorNumber": 1,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F1-A04",
+      "floorNumber": 1,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F1-A05",
+      "floorNumber": 1,
+      "status": "UNKNOWN",
+      "ledColor": "OFF",
+      "lastUpdate": "2026-11-24T21:47:40+07:00"
+    },
+    {
+      "slotId": "F1-A06",
+      "floorNumber": 1,
+      "status": "UNKNOWN",
+      "ledColor": "OFF",
+      "lastUpdate": "2026-11-24T21:47:40+07:00"
+    },
+    {
+      "slotId": "F1-A07",
+      "floorNumber": 1,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F1-A08",
+      "floorNumber": 1,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F1-A09",
+      "floorNumber": 1,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F1-A10",
+      "floorNumber": 1,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F1-A11",
+      "floorNumber": 1,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F1-A12",
+      "floorNumber": 1,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F1-A13",
+      "floorNumber": 1,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F1-A14",
+      "floorNumber": 1,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F1-A15",
+      "floorNumber": 1,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F1-A16",
+      "floorNumber": 1,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F1-A17",
+      "floorNumber": 1,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F1-A18",
+      "floorNumber": 1,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F1-A19",
+      "floorNumber": 1,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F1-A20",
+      "floorNumber": 1,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F2-A01",
+      "floorNumber": 2,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F2-A02",
+      "floorNumber": 2,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F2-A03",
+      "floorNumber": 2,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F2-A04",
+      "floorNumber": 2,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F2-A05",
+      "floorNumber": 2,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F2-A06",
+      "floorNumber": 2,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F2-A07",
+      "floorNumber": 2,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F2-A08",
+      "floorNumber": 2,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F2-A09",
+      "floorNumber": 2,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F2-A10",
+      "floorNumber": 2,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F2-A11",
+      "floorNumber": 2,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F2-A12",
+      "floorNumber": 2,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F2-A13",
+      "floorNumber": 2,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F2-A14",
+      "floorNumber": 2,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F2-A15",
+      "floorNumber": 2,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F2-A16",
+      "floorNumber": 2,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F2-A17",
+      "floorNumber": 2,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F2-A18",
+      "floorNumber": 2,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F2-A19",
+      "floorNumber": 2,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    },
+    {
+      "slotId": "F2-A20",
+      "floorNumber": 2,
+      "status": "AVAILABLE",
+      "ledColor": "GREEN",
+      "lastUpdate": null
+    }
+  ],
+  "generatedAt": "2026-11-24T21:58:41+07:00"
+}
+
+--- [2026-11-24T21:58:41+07:00] GET /occupancy/floors (unknown dihitung terpisah)
+$ curl.exe -s -X GET -H "Authorization: Bearer dev-dashboard-token" "http://localhost:8000/api/v1/occupancy/floors"
+HTTP 200
+{
+  "floors": [
+    {
+      "floorNumber": 1,
+      "isOpen": true,
+      "total": 20,
+      "available": 18,
+      "occupied": 0,
+      "unknown": 2
+    },
+    {
+      "floorNumber": 2,
+      "isOpen": false,
+      "total": 20,
+      "available": 20,
+      "occupied": 0,
+      "unknown": 0
+    }
+  ],
+  "generatedAt": "2026-11-24T21:58:42+07:00"
+}
+
+--- [2026-11-24T21:58:42+07:00] Tampilan dashboard: setelah sensor_stale
+Koneksi       : ● Terhubung
+Diperbarui    : Terakhir diperbarui: 21:58:42 WIB
+Banner        : (tidak ada)
+Ringkasan     : Slot kosong 38 dari 40 slot Semua lantai Slot terisi 0 dari 40 slot Semua lantai Tidak diketahui 2 sensor bermasalah Terpisah Lantai dibuka 1/2 lantai beroperasi Status lantai
+Kartu lantai  : Lantai 1 DIBUKA 0% terisi Kosong 18/20 Terisi 0/20 Tidak diketahui 2/20 Lantai 2 DITUTUP 0% terisi Kosong 20/20 Terisi 0/20 Tidak diketahui 0/20
+Lantai DITUTUP: ya (kartu redup)
+Badge sensor  : 2 peringatan
+Peringatan    : F1-A05 Lantai 1 · laporan terakhir 21:47:40 WIB LED OFF, dikeluarkan dari rekomendasi F1-A06 Lantai 1 · laporan terakhir 21:47:40 WIB LED OFF, dikeluarkan dari rekomendasi
+
+--- [2026-11-24T21:58:43+07:00] PUT /slots/F2-A17/status dengan rawSensorValue 500 cm
+$ curl.exe -s -X PUT -H "X-Device-Key: parksense-dev-key" -H "Content-Type: application/json" "http://localhost:8000/api/v1/slots/F2-A17/status" -d '{"gatewayId":"ESP32-GW-F2","sensorType":"ULTRASONIC","rawSensorValue":500,"unit":"cm","status":"AVAILABLE","measuredAt":"2026-11-24T21:58:43+07:00"}'
+HTTP 200
+{
+  "slotId": "F2-A17",
+  "currentStatus": "UNKNOWN",
+  "ledCommand": {
+    "color": "OFF",
+    "sent": true
+  },
+  "anomaly": "OUT_OF_RANGE"
+}
+
+--- [2026-11-24T21:58:44+07:00] Tampilan dashboard: setelah F2-A17 = 500 cm
+Koneksi       : ● Terhubung
+Diperbarui    : Terakhir diperbarui: 21:58:44 WIB
+Banner        : (tidak ada)
+Ringkasan     : Slot kosong 37 dari 40 slot Semua lantai Slot terisi 0 dari 40 slot Semua lantai Tidak diketahui 3 sensor bermasalah Terpisah Lantai dibuka 1/2 lantai beroperasi Status lantai
+Kartu lantai  : Lantai 1 DIBUKA 0% terisi Kosong 18/20 Terisi 0/20 Tidak diketahui 2/20 Lantai 2 DITUTUP 0% terisi Kosong 19/20 Terisi 0/20 Tidak diketahui 1/20
+Lantai DITUTUP: ya (kartu redup)
+Badge sensor  : 3 peringatan
+Peringatan    : F1-A05 Lantai 1 · laporan terakhir 21:47:40 WIB LED OFF, dikeluarkan dari rekomendasi F1-A06 Lantai 1 · laporan terakhir 21:47:40 WIB LED OFF, dikeluarkan dari rekomendasi F2-A17 Lantai 2 · laporan terakhir 21:58:43 WIB LED OFF, dikeluarkan dari rekomendasi
+
+--- [2026-11-24T21:58:45+07:00] Pulihkan: reset
+$ curl.exe -s -X POST -H "X-Device-Key: parksense-dev-key" "http://localhost:8000/api/v1/dev/scenario/reset"
+HTTP 200
+{
+  "scenario": "reset",
+  "applied": true
+}
+
+--- [2026-11-24T21:58:45+07:00] Tampilan dashboard: setelah reset
+Koneksi       : ● Terhubung
+Diperbarui    : Terakhir diperbarui: 21:58:46 WIB
+Banner        : (tidak ada)
+Ringkasan     : Slot kosong 40 dari 40 slot Semua lantai Slot terisi 0 dari 40 slot Semua lantai Tidak diketahui 0 sensor bermasalah Terpisah Lantai dibuka 1/2 lantai beroperasi Status lantai
+Kartu lantai  : Lantai 1 DIBUKA 0% terisi Kosong 20/20 Terisi 0/20 Tidak diketahui 0/20 Lantai 2 DITUTUP 0% terisi Kosong 20/20 Terisi 0/20 Tidak diketahui 0/20
+Lantai DITUTUP: ya (kartu redup)
+Badge sensor  : 0
+Peringatan    : ✓ Semua sensor normal · tidak ada slot berstatus UNKNOWN
+

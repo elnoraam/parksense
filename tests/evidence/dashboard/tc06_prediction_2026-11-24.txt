@@ -1,0 +1,106 @@
+ParkSense — bukti uji TC-06 (sisi tampilan): prediksi jam puncak + galat INVALID_TIME_WINDOW
+Dibuat      : 2026-11-24T21:58:46+07:00
+Backend     : python -m uvicorn backend.main:app --reload --port 8000
+Dashboard   : http://localhost:8000/web/dashboard/index.html
+GET /health : {"status":"ok","ai":{"recommend_slot":"fallback","predict_occupancy":"fallback","make_advisory":"fallback","detect_anomaly":"fallback","status_from_distance":"fallback","load_history":"fallback"}}
+Catatan     : 'Tampilan dashboard' = hasil menjalankan <script> web/dashboard/index.html
+              terhadap backend yang sama (DOM tiruan di Node), bukan tangkapan layar.
+==================================================================
+
+--- [2026-11-24T21:58:47+07:00] Kondisi awal: reset (lantai 2 tertutup)
+$ curl.exe -s -X POST -H "X-Device-Key: parksense-dev-key" "http://localhost:8000/api/v1/dev/scenario/reset"
+HTTP 200
+{
+  "scenario": "reset",
+  "applied": true
+}
+
+--- [2026-11-24T21:58:47+07:00] Prediksi fromHour=6&toHour=9
+$ curl.exe -s -X GET -H "Authorization: Bearer dev-dashboard-token" "http://localhost:8000/api/v1/ai/predictions/occupancy?fromHour=6&toHour=9"
+HTTP 200
+{
+  "fromHour": 6,
+  "toHour": 9,
+  "predictions": [
+    {
+      "hour": 6,
+      "floorNumber": 1,
+      "predictedOccupancyPercent": 28.8
+    },
+    {
+      "hour": 6,
+      "floorNumber": 2,
+      "predictedOccupancyPercent": 0.0
+    },
+    {
+      "hour": 7,
+      "floorNumber": 1,
+      "predictedOccupancyPercent": 61.0
+    },
+    {
+      "hour": 7,
+      "floorNumber": 2,
+      "predictedOccupancyPercent": 14.7
+    },
+    {
+      "hour": 8,
+      "floorNumber": 1,
+      "predictedOccupancyPercent": 87.2
+    },
+    {
+      "hour": 8,
+      "floorNumber": 2,
+      "predictedOccupancyPercent": 45.7
+    },
+    {
+      "hour": 9,
+      "floorNumber": 1,
+      "predictedOccupancyPercent": 95.1
+    },
+    {
+      "hour": 9,
+      "floorNumber": 2,
+      "predictedOccupancyPercent": 52.9
+    }
+  ],
+  "advisory": "Lantai 1 diperkirakan penuh sekitar pukul 09.00 (95%). Pertimbangkan membuka lantai 2 lebih awal."
+}
+
+--- [2026-11-24T21:58:48+07:00] Rentang salah fromHour=9&toHour=6
+$ curl.exe -s -X GET -H "Authorization: Bearer dev-dashboard-token" "http://localhost:8000/api/v1/ai/predictions/occupancy?fromHour=9&toHour=6"
+HTTP 400
+{
+  "status": 400,
+  "code": "INVALID_TIME_WINDOW",
+  "message": "fromHour harus lebih kecil dari toHour dan berada di rentang 0-23"
+}
+
+--- [2026-11-24T21:58:48+07:00] Tampilan dashboard: grafik prediksi
+[Halaman dibuka, input 6..9]
+  Status      : Prediksi 06:00–09:00 (rentang inklusif)
+  Kotak galat : (tidak tampil)
+  Keterangan  : (tidak ada)
+  Grafik      : dibuat 1 kali, dihancurkan 0 kali; sumbu X = 06:00, 07:00, 08:00, 09:00
+     Lantai 1 = [28.8,61,87.2,95.1]
+     Lantai 2 = [0,14.7,45.7,52.9]
+     Batas penuh 85% = [85,85,85,85]
+  Saran AI    : Lantai 1 diperkirakan penuh sekitar pukul 09.00 (95%). Pertimbangkan membuka lantai 2 lebih awal.
+[Input 9..6, tombol Tampilkan Prediksi]
+  Status      : (kosong)
+  Kotak galat : Galat 400 INVALID_TIME_WINDOW | fromHour harus lebih kecil dari toHour dan berada di rentang 0-23
+  Keterangan  : Grafik dan Saran AI adalah hasil sebelumnya (06:00–09:00).
+  Grafik      : dibuat 1 kali, dihancurkan 0 kali; sumbu X = 06:00, 07:00, 08:00, 09:00
+     Lantai 1 = [28.8,61,87.2,95.1]
+     Lantai 2 = [0,14.7,45.7,52.9]
+     Batas penuh 85% = [85,85,85,85]
+  Saran AI    : Lantai 1 diperkirakan penuh sekitar pukul 09.00 (95%). Pertimbangkan membuka lantai 2 lebih awal.
+[Kembali ke 6..9]
+  Status      : Prediksi 06:00–09:00 (rentang inklusif)
+  Kotak galat : (tidak tampil)
+  Keterangan  : (tidak ada)
+  Grafik      : dibuat 2 kali, dihancurkan 1 kali; sumbu X = 06:00, 07:00, 08:00, 09:00
+     Lantai 1 = [28.8,61,87.2,95.1]
+     Lantai 2 = [0,14.7,45.7,52.9]
+     Batas penuh 85% = [85,85,85,85]
+  Saran AI    : Lantai 1 diperkirakan penuh sekitar pukul 09.00 (95%). Pertimbangkan membuka lantai 2 lebih awal.
+

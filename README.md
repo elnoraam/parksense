@@ -30,8 +30,10 @@ curl "$B/ai/predictions/occupancy?fromHour=6&toHour=9" -H "$TOKEN"
 
 ## Tes
 ```bash
-python -m pytest            # 13 tes: TC-01 s.d. TC-09 + kasus galat
-python -m backend.export_openapi   # menulis docs/openapi.json
+python -m pip install -r requirements.txt   # sekali saja, sebelum menjalankan tes
+python -m pytest                            # semua tes: API, AI, dan simulator
+python -m pytest tests/api_tests            # hanya tes API
+python -m backend.export_openapi            # menulis docs/openapi.json
 ```
 
 ## Struktur

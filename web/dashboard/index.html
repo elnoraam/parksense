@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ParkSense — Dashboard Pengelola</title>
+<!-- Font Plus Jakarta Sans (Google Fonts); bila offline otomatis kembali ke Segoe UI -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* Tema biru ITB */
+    --navy: #0b2f6b;      /* teks judul, pil aktif */
+    --blue: #1f56b8;      /* warna utama */
+    --sky: #38a3e8;       /* aksen kedua */
+    --blue-soft: #e8f0fb;
+    --bg: #e9edf3; --app: #f4f6fa; --card: #ffffff; --line: #e4e9f1;
+    --text: #0f1b33; --muted: #66718a;
+    /* Warna status (hanya untuk status, bukan dekorasi) */
+    --ok: #15803d; --ok-soft: #dcfce7;
+    --warn: #d97706; --danger: #dc2626; --danger-soft: #fee2e2;
+    --unk: #94a3b8;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 28px; background: var(--bg); color: var(--text); font-size: 17px;
+         font-family: "Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif; }
+  input, button { font-family: inherit; }
+  .app { max-width: 1400px; margin: 0 auto; background: var(--app); border-radius: 36px; padding: 22px 30px 34px;
+         box-shadow: 0 20px 60px rgba(15, 27, 51, .08); }
+  .num { font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+  .muted { color: var(--muted); }
+
+  /* ---------- Bar atas ---------- */
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+            background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 10px 12px 10px 14px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-size: 24px; font-weight: 700; color: var(--navy); }
+  .logo { width: 40px; height: 40px; border-radius: 12px; background: var(--blue); color: #fff;
+          display: grid; place-items: center; font-size: 22px; font-weight: 800; }
+  .place { padding: 9px 20px; border-radius: 999px; background: var(--app); color: var(--muted); font-size: 16px; }
+  #conn { padding: 9px 18px; border-radius: 999px; font-size: 16px; font-weight: 600; background: var(--app); }
+  #conn.online { color: var(--ok); }
+  #conn.offline { color: #fff; background: var(--danger); }
+
+  /* ---------- Judul ---------- */
+  .title-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+               margin: 30px 4px 22px; }
+  h1 { margin: 0; font-size: 42px; font-weight: 600; letter-spacing: -.03em; color: var(--text); }
+  .title-row p { margin: 6px 0 0; color: var(--muted); font-size: 17px; }
+  #updated { background: var(--navy); color: #fff; border-radius: 999px; padding: 13px 22px; font-size: 16px; }
+
+  #banner { display: none; background: var(--danger-soft); color: var(--danger); border: 1.5px solid var(--danger);
+            border-radius: 18px; padding: 14px 20px; font-size: 19px; font-weight: 600; margin-bottom: 18px; }
+  #banner.show { display: block; }
+  #mockNote { display: none; background: #fef3c7; color: #92400e; border-radius: 18px; padding: 12px 20px;
+              font-weight: 600; margin-bottom: 18px; }
+  #mockNote.show { display: block; }
+
+  /* ---------- Kartu umum ---------- */
+  .grid { display: grid; gap: 20px; margin-bottom: 20px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 28px; padding: 24px 26px; }
+  .card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+  h2 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -.01em; }
+  .pill { display: inline-block; padding: 7px 16px; border-radius: 999px; background: var(--app);
+          border: 1px solid var(--line); font-size: 15px; font-weight: 600; white-space: nowrap; }
+  .icon { width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; flex: none;
+          box-shadow: inset 0 0 0 4px rgba(255,255,255,.35); }
+  .icon svg { width: 24px; height: 24px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* ---------- A. Ringkasan (KPI) ---------- */
+  #kpis { grid-template-columns: repeat(4, 1fr); }
+  .kpi-top { display: flex; align-items: center; gap: 14px; }
+  .kpi-label { font-size: 18px; line-height: 1.25; }
+  .kpi-value { font-size: 58px; font-weight: 500; margin: 18px 0 10px; line-height: 1; }
+  .kpi-foot { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 15px; }
+
+  /* ---------- B. Kartu lantai ---------- */
+  .row2 { grid-template-columns: 1fr 1fr; }
+  .floor-body { display: grid; grid-template-columns: 190px 1fr; gap: 28px; align-items: center; }
+  .floor-body .donut-wrap { margin: 0; }
+  .floor.closed > *:not(.card-head) { opacity: .45; filter: grayscale(.7); }
+  .tag-open { color: var(--ok); background: var(--ok-soft); border-color: transparent; }
+  .tag-closed { color: #fff; background: var(--navy); border-color: transparent; }
+  .donut-wrap { display: grid; place-items: center; margin: 4px 0 22px; position: relative; }
+  .donut { width: 190px; height: 190px; border-radius: 50%; position: relative; }
+  .donut::after { content: ""; position: absolute; inset: 20px; border-radius: 50%; background: var(--card); }
+  .donut-center { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; z-index: 1; }
+  .donut-center b { font-size: 46px; font-weight: 500; line-height: 1; }
+  .donut-center span { color: var(--muted); font-size: 16px; margin-top: 4px; }
+  .rows { display: grid; gap: 14px; }
+  .row-label { display: flex; justify-content: space-between; font-size: 16px; color: var(--muted); margin-bottom: 6px; }
+  .row-label b { color: var(--text); font-weight: 600; }
+  .track { height: 16px; border-radius: 999px; background: #eef2f7; overflow: hidden; }
+  /* Isi bergaris (hatched) seperti progress bar pada referensi */
+  .fill { height: 100%; border-radius: 999px; transition: width .4s;
+          background: repeating-linear-gradient(-45deg, var(--c) 0 5px, color-mix(in srgb, var(--c) 55%, #fff) 5px 8px); }
+
+  /* ---------- D. Peringatan sensor ---------- */
+  #alertCount { padding: 7px 16px; border-radius: 999px; font-size: 15px; font-weight: 700; }
+  #alertCount.has { background: var(--danger); color: #fff; }
+  #alertCount.none { background: var(--ok-soft); color: var(--ok); }
+  /* Kartu peringatan: satu baris penuh, isi ringkas */
+  .alerts-card { margin-bottom: 20px; }
+  .alerts-card .card-head { margin-bottom: 14px; }
+  .all-ok { display: flex; align-items: center; gap: 14px; background: var(--ok-soft); color: var(--ok);
+            border-radius: 18px; padding: 14px 18px; font-size: 18px; font-weight: 600; }
+  .all-ok .dot { width: 34px; height: 34px; border-radius: 50%; background: var(--ok); color: #fff;
+                 display: grid; place-items: center; font-size: 18px; flex: none; }
+  .all-ok small { color: var(--muted); font-weight: 500; font-size: 15px; }
+  .alert-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px;
+                grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); }
+  .alert-list li { background: #fff6f6; border: 1px solid #fbd5d5; border-radius: 20px; padding: 14px 18px; }
+  .alert-list .sid { font-size: 24px; font-weight: 700; letter-spacing: -.01em; }
+  .alert-list .meta { color: var(--muted); font-size: 15px; }
+  .alert-list .why { color: var(--danger); font-weight: 600; font-size: 15px; margin-top: 4px; }
+  .alert-list li.new { animation: flash 1.2s ease-in-out 3; }
+  @keyframes flash { 50% { background: #fecaca; box-shadow: 0 0 0 3px var(--danger); } }
+
+  /* ---------- C. Prediksi ---------- */
+  .pred { display: grid; grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr); gap: 26px; }
+  .chart-panel { background: var(--app); border-radius: 22px; padding: 16px 18px 10px; }
+  #predLegend { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 6px; }
+  #predLegend span { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px;
+                     background: var(--card); border: 1px solid var(--line); font-size: 15px; }
+  #predLegend span:first-child { background: var(--navy); color: #fff; border-color: var(--navy); }
+  #predLegend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  #predLegend i.dash { width: 18px; height: 0; border-radius: 0; border-top: 2px dashed #64748b; }
+  .chart-box { position: relative; height: 340px; }
+  .chart-box.stale { opacity: .45; }
+  .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .controls label { font-size: 15px; color: var(--muted); }
+  .controls input { width: 100%; font: inherit; font-size: 22px; padding: 10px 16px; margin-top: 6px;
+                    border: 1px solid var(--line); border-radius: 999px; background: var(--app); color: var(--text); }
+  .controls input:focus { outline: 2px solid var(--blue); outline-offset: 1px; }
+  #predBtn { grid-column: 1 / -1; font: inherit; font-size: 18px; font-weight: 600; border: 0; border-radius: 999px;
+             padding: 14px 20px; background: var(--navy); color: #fff; cursor: pointer; }
+  #predBtn:hover { background: var(--blue); }
+  #predBtn:disabled { opacity: .6; cursor: wait; }
+  #predStatus { margin: 14px 0 0; font-size: 15px; }
+  #predError { display: none; background: var(--danger-soft); color: var(--danger); border: 1.5px solid var(--danger);
+               border-radius: 18px; padding: 12px 16px; margin-top: 14px; font-size: 17px; }
+  #predError.show { display: block; }
+  #predNote { display: none; color: #92400e; background: #fef3c7; border-radius: 14px; padding: 10px 14px;
+              margin-top: 10px; font-weight: 600; font-size: 15px; }
+  #predNote.show { display: block; }
+  #advisory { margin-top: 16px; background: var(--blue-soft); border-radius: 20px; padding: 16px 18px; font-size: 18px; line-height: 1.45; }
+  #advisory b { display: block; color: var(--blue); font-size: 14px; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+  #predPeaks { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+  #predPeaks div { color: var(--muted); font-size: 15px; }
+  #predPeaks b { display: block; color: var(--text); font-size: 34px; font-weight: 500; margin-top: 2px; }
+
+  @media (max-width: 1150px) {
+    #kpis { grid-template-columns: repeat(2, 1fr); }
+    .row2 { grid-template-columns: 1fr; }
+    .pred { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 700px) {
+    body { padding: 10px; }
+    .app { padding: 14px; border-radius: 24px; }
+    #kpis, .row2 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand"><div class="logo">P</div>ParkSense</div>
+    <div class="place">Gedung Parkir Motor · ITB Jatinangor</div>
+    <span id="conn">Menghubungkan…</span>
+  </header>
+
+  <div class="title-row">
+    <div>
+      <h1>Dashboard Pengelola</h1>
+      <p>Okupansi langsung, prediksi jam puncak, dan kondisi sensor</p>
+    </div>
+    <div id="updated">Terakhir diperbarui: –</div>
+  </div>
+
+  <div id="banner"></div>
+  <div id="mockNote">Mode data tiruan (USE_MOCK = true): data bukan dari backend.</div>
+
+  <!-- A. Ringkasan semua lantai -->
+  <section id="kpis" class="grid"></section>
+
+  <div class="grid row2">
+    <!-- B. Kartu per lantai (diisi JS) -->
+    <div id="floors" style="display: contents">
+      <section class="card muted">Memuat data lantai…</section>
+    </div>
+  </div>
+
+  <!-- D. Peringatan sensor (baris sendiri, ringkas) -->
+  <section class="card alerts-card">
+    <div class="card-head">
+      <h2>Peringatan Sensor</h2>
+      <span id="alertCount"></span>
+    </div>
+    <div id="alerts" class="muted">Memuat data sensor…</div>
+  </section>
+
+  <!-- C. Prediksi okupansi -->
+  <section class="card">
+    <div class="card-head">
+      <h2>Prediksi Okupansi per Jam</h2>
+      <span class="pill">Model AI</span>
+    </div>
+    <div class="pred">
+      <div class="chart-panel">
+        <div id="predLegend"></div>
+        <div id="chartBox" class="chart-box"><canvas id="predChart"></canvas></div>
+      </div>
+      <div>
+        <div class="controls">
+          <label>Dari jam (fromHour)<input id="fromHour" type="number" min="0" max="23" value="6"></label>
+          <label>Sampai jam (toHour)<input id="toHour" type="number" min="0" max="23" value="9"></label>
+          <button id="predBtn">Tampilkan Prediksi</button>
+        </div>
+        <div id="predStatus" class="muted">Memuat prediksi…</div>
+        <div id="predError"></div>
+        <div id="predNote"></div>
+        <div id="advisory"><b>Saran AI</b><span id="advisoryText">–</span></div>
+        <div id="predPeaks"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- Satu-satunya library eksternal: Chart.js dari CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+// ===== Konfigurasi: satu-satunya tempat URL, token, dan interval =====
+// Bila dibuka lewat backend (http://localhost:8000/web/dashboard/) pakai origin yang sama;
+// bila dibuka langsung sebagai file, pakai localhost:8000.
+const API_BASE = location.protocol.startsWith("http")
+  ? location.origin + "/api/v1"
+  : "http://localhost:8000/api/v1";
+const DASHBOARD_TOKEN = "dev-dashboard-token";
+const REFRESH_MS = 3000;
+const USE_MOCK = false; // true = data tiruan persis bentuk respons FINAL kontrak (Bagian 4)
+
+const $ = (id) => document.getElementById(id);
+
+// ===== Pemanggil API =====
+// Selalu mengirim Bearer token. Hasil: {ok, status, data, error}.
+// error berisi body galat backend {status, code, message}; status 0 = backend tidak terjangkau.
+async function apiGet(path) {
+  if (USE_MOCK) return mockGet(path);
+  try {
+    const res = await fetch(API_BASE + path, {
+      headers: { Authorization: `Bearer ${DASHBOARD_TOKEN}` },
+    });
+    let body = null;
+    try { body = await res.json(); } catch { /* respons tanpa JSON */ }
+    if (res.ok) return { ok: true, status: res.status, data: body, error: null };
+    const error = body && body.code
+      ? body
+      : { status: res.status, code: "HTTP_" + res.status, message: "Respons galat dari backend" };
+    return { ok: false, status: res.status, data: null, error };
+  } catch {
+    return { ok: false, status: 0, data: null,
+             error: { status: 0, code: "NETWORK_ERROR", message: "Backend tidak terhubung" } };
+  }
+}
+
+// ===== Data tiruan (USE_MOCK) — bentuk persis respons FINAL kontrak =====
+function mockNowIso() {
+  // waktu sekarang dalam ISO 8601 zona +07:00
+  return new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 19) + "+07:00";
+}
+
+function mockGet(path) {
+  const url = new URL(path, "http://mock");
+  if (url.pathname === "/occupancy/floors") {
+    return { ok: true, status: 200, error: null, data: {
+      floors: [
+        { floorNumber: 1, isOpen: true, total: 20, available: 1, occupied: 17, unknown: 2 },
+        { floorNumber: 2, isOpen: false, total: 20, available: 20, occupied: 0, unknown: 0 },
+      ],
+      generatedAt: mockNowIso(),
+    } };
+  }
+  if (url.pathname === "/slots") {
+    const slots = [];
+    for (let fl = 1; fl <= 2; fl++) {
+      for (let n = 1; n <= 20; n++) {
+        const slotId = `F${fl}-A${String(n).padStart(2, "0")}`;
+        let status = "AVAILABLE", ledColor = "GREEN", lastUpdate = null;
+        if (fl === 1 && (n === 5 || n === 6)) { status = "UNKNOWN"; ledColor = "OFF"; lastUpdate = "2026-11-24T07:31:12+07:00"; }
+        else if (fl === 1 && n <= 19) { status = "OCCUPIED"; ledColor = "RED"; lastUpdate = mockNowIso(); }
+        slots.push({ slotId, floorNumber: fl, status, ledColor, lastUpdate });
+      }
+    }
+    return { ok: true, status: 200, error: null, data: { slots, generatedAt: mockNowIso() } };
+  }
+  if (url.pathname === "/ai/predictions/occupancy") {
+    const fromHour = Number(url.searchParams.get("fromHour"));
+    const toHour = Number(url.searchParams.get("toHour"));
+    if (!(Number.isInteger(fromHour) && Number.isInteger(toHour) && 0 <= fromHour && fromHour < toHour && toHour <= 23)) {
+      return { ok: false, status: 400, data: null, error: { status: 400, code: "INVALID_TIME_WINDOW",
+        message: "fromHour harus lebih kecil dari toHour dan berada di rentang 0-23" } };
+    }
+    const curve1 = [5, 4, 4, 4, 5, 6, 20, 70, 95, 98, 97, 90, 82, 78, 72, 65, 55, 40, 28, 18, 12, 9, 7, 6];
+    const predictions = [];
+    for (let h = fromHour; h <= toHour; h++) {
+      predictions.push({ hour: h, floorNumber: 1, predictedOccupancyPercent: curve1[h] });
+      predictions.push({ hour: h, floorNumber: 2, predictedOccupancyPercent: Math.max(0, (curve1[h] - 80) * 2.5) });
+    }
+    return { ok: true, status: 200, error: null, data: { fromHour, toHour, predictions,
+      advisory: "Lantai 1 diperkirakan terisi 95% pada pukul 08.00. Disarankan membuka lantai 2 lebih awal." } };
+  }
+  return { ok: false, status: 404, data: null, error: { status: 404, code: "NOT_FOUND", message: "Path tiruan tidak dikenal" } };
+}
+
+// ===== Header: indikator koneksi + waktu pembaruan =====
+// "HH:MM:SS WIB" dari generatedAt (ISO +07:00)
+function formatWib(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return "–";
+  return d.toLocaleTimeString("en-GB", { timeZone: "Asia/Jakarta", hour12: false }) + " WIB";
+}
+
+function setConnection(online) {
+  $("conn").textContent = online ? "● Terhubung" : "○ Backend tidak terhubung";
+  $("conn").className = online ? "online" : "offline";
+}
+
+function setUpdated(generatedAt) {
+  $("updated").textContent = "Terakhir diperbarui: " + formatWib(generatedAt);
+}
+
+// Ikon garis sederhana (SVG inline, tanpa library)
+const ICONS = {
+  free: '<svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg>',
+  taken: '<svg viewBox="0 0 24 24"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M9 17h6l-3-7h4M6 17l3-7h3"/></svg>',
+  unknown: '<svg viewBox="0 0 24 24"><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 18h.01"/></svg>',
+  floors: '<svg viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5"/></svg>',
+};
+
+// ===== A + B. Ringkasan dan kartu per lantai (GET /occupancy/floors) =====
+function occupiedPercent(f) {
+  return f.total > 0 ? Math.round(f.occupied / f.total * 100) : 0;
+}
+
+// Warna terisi: < 70% biru, 70–84% oranye, >= 85% merah
+function levelColor(pct) {
+  if (pct >= 85) return "var(--danger)";
+  if (pct >= 70) return "var(--warn)";
+  return "var(--blue)";
+}
+
+function kpiCard(icon, color, label, value, foot, pill) {
+  return `
+    <article class="card">
+      <div class="kpi-top">
+        <div class="icon" style="background:${color}">${ICONS[icon]}</div>
+        <div class="kpi-label">${label}</div>
+      </div>
+      <div class="kpi-value num">${value}</div>
+      <div class="kpi-foot"><span>${foot}</span><span class="pill">${pill}</span></div>
+    </article>`;
+}
+
+function floorCard(f) {
+  const pct = occupiedPercent(f);
+  const unkPct = f.total > 0 ? f.unknown / f.total * 100 : 0;
+  const occPct = f.total > 0 ? f.occupied / f.total * 100 : 0;
+  const color = levelColor(pct);
+  // Cincin donat: terisi -> tidak diketahui -> kosong
+  const ring = `conic-gradient(${color} 0 ${occPct}%, var(--unk) ${occPct}% ${occPct + unkPct}%, #e8eef6 ${occPct + unkPct}% 100%)`;
+  const row = (label, n, c) => `
+    <div>
+      <div class="row-label"><span>${label}</span><b class="num">${n}/${f.total}</b></div>
+      <div class="track"><div class="fill" style="--c:${c}; width:${f.total ? n / f.total * 100 : 0}%"></div></div>
+    </div>`;
+  return `
+    <section class="card floor ${f.isOpen ? "" : "closed"}">
+      <div class="card-head">
+        <h2>Lantai ${f.floorNumber}</h2>
+        <span class="pill ${f.isOpen ? "tag-open" : "tag-closed"}">${f.isOpen ? "DIBUKA" : "DITUTUP"}</span>
+      </div>
+      <div class="floor-body">
+        <div class="donut-wrap">
+          <div class="donut" style="background:${ring}"></div>
+          <div class="donut-center"><b class="num">${pct}%</b><span>terisi</span></div>
+        </div>
+        <div class="rows">
+          ${row("Kosong", f.available, "var(--blue)")}
+          ${row("Terisi", f.occupied, color)}
+          ${row("Tidak diketahui", f.unknown, "var(--unk)")}
+        </div>
+      </div>
+    </section>`;
+}
+
+function renderFloors(floors) {
+  const sorted = [...floors].sort((a, b) => a.floorNumber - b.floorNumber);
+  // Ringkasan semua lantai (unknown tetap dihitung terpisah)
+  const sum = (key) => sorted.reduce((n, f) => n + f[key], 0);
+  const total = sum("total");
+  const openCount = sorted.filter((f) => f.isOpen).length;
+  $("kpis").innerHTML =
+    kpiCard("free", "var(--blue)", "Slot<br>kosong", sum("available"), `dari ${total} slot`, "Semua lantai") +
+    kpiCard("taken", "var(--navy)", "Slot<br>terisi", sum("occupied"), `dari ${total} slot`, "Semua lantai") +
+    kpiCard("unknown", "var(--unk)", "Tidak<br>diketahui", sum("unknown"), "sensor bermasalah", "Terpisah") +
+    kpiCard("floors", "var(--sky)", "Lantai<br>dibuka", `${openCount}/${sorted.length}`, "lantai beroperasi", "Status lantai");
+  $("floors").innerHTML = sorted.map(floorCard).join("");
+}
+
+// ===== C. Grafik prediksi (GET /ai/predictions/occupancy) =====
+// Warna seri per lantai (sudah dicek aman untuk buta warna) + bentuk titik berbeda
+const FLOOR_STYLE = {
+  1: { color: "#1f56b8", point: "circle" },
+  2: { color: "#38a3e8", point: "rect" },
+};
+let predChart = null;      // instance Chart.js yang sedang tampil
+let lastWindow = null;     // rentang jam grafik yang sedang tampil, mis. {fromHour:6,toHour:9}
+
+const hourLabel = (h) => String(h).padStart(2, "0") + ":00";
+
+async function loadPrediction() {
+  // Nilai input dikirim apa adanya (tanpa validasi di browser),
+  // supaya galat 400 yang tampil benar-benar berasal dari backend (TC-06).
+  const from = $("fromHour").value;
+  const to = $("toHour").value;
+  $("predBtn").disabled = true;
+  $("predStatus").textContent = "Memuat prediksi…";
+  try {
+    const res = await apiGet(`/ai/predictions/occupancy?fromHour=${encodeURIComponent(from)}&toHour=${encodeURIComponent(to)}`);
+    if (res.ok) {
+      $("predError").classList.remove("show");
+      $("predNote").classList.remove("show");
+      $("chartBox").classList.remove("stale");
+      $("predStatus").textContent =
+        `Prediksi ${hourLabel(res.data.fromHour)}–${hourLabel(res.data.toHour)} (rentang inklusif)`;
+      $("advisoryText").textContent = res.data.advisory;
+      renderPeaks(res.data.predictions);
+      drawChart(res.data);
+    } else {
+      showPredictionError(res);
+    }
+  } catch (err) {
+    console.error(err);
+    showPredictionError({ status: 0, error: { code: "CLIENT_ERROR", message: String(err) } });
+  } finally {
+    $("predBtn").disabled = false;
+  }
+}
+
+// Kotak galat merah berisi code + message dari backend; grafik lama tetap terlihat
+function showPredictionError(res) {
+  const e = res.error;
+  const title = document.createElement("b");
+  title.textContent = res.status ? `Galat ${res.status} ${e.code}` : e.code;
+  const msg = document.createElement("div");
+  msg.textContent = e.message;
+  $("predError").replaceChildren(title, msg);
+  $("predError").classList.add("show");
+  $("predStatus").textContent = "";
+  if (lastWindow) {
+    $("predNote").textContent =
+      `Grafik dan Saran AI adalah hasil sebelumnya (${hourLabel(lastWindow.fromHour)}–${hourLabel(lastWindow.toHour)}).`;
+    $("predNote").classList.add("show");
+    $("chartBox").classList.add("stale");
+  }
+}
+
+// Puncak prediksi per lantai (dihitung dari data prediksi, bukan angka baru)
+function renderPeaks(predictions) {
+  const floorNumbers = [...new Set(predictions.map((p) => p.floorNumber))].sort((a, b) => a - b);
+  $("predPeaks").innerHTML = floorNumbers.map((fl) => {
+    const peak = predictions.filter((p) => p.floorNumber === fl)
+      .reduce((a, b) => (b.predictedOccupancyPercent > a.predictedOccupancyPercent ? b : a));
+    return `<div>Puncak lantai ${fl} · ${hourLabel(peak.hour)}<b class="num">${Math.round(peak.predictedOccupancyPercent)}%</b></div>`;
+  }).join("");
+}
+
+function drawChart(data) {
+  if (typeof Chart === "undefined") {
+    $("predStatus").textContent = "Chart.js gagal dimuat (perlu internet untuk CDN).";
+    return;
+  }
+  // Sumbu X: setiap jam dalam rentang (inklusif)
+  const hours = [];
+  for (let h = data.fromHour; h <= data.toHour; h++) hours.push(h);
+  const floorNumbers = [...new Set(data.predictions.map((p) => p.floorNumber))].sort((a, b) => a - b);
+
+  // Satu garis per lantai
+  const datasets = floorNumbers.map((fl) => {
+    const style = FLOOR_STYLE[fl] || { color: "#64748b", point: "triangle" };
+    return {
+      label: `Lantai ${fl}`,
+      data: hours.map((h) => {
+        const p = data.predictions.find((x) => x.hour === h && x.floorNumber === fl);
+        return p ? p.predictedOccupancyPercent : null;
+      }),
+      borderColor: style.color,
+      backgroundColor: style.color,
+      pointStyle: style.point,
+      borderWidth: 3,
+      pointRadius: 7,
+      pointHoverRadius: 9,
+      pointBorderColor: "#fff",
+      pointBorderWidth: 2,
+      tension: 0.35,
+    };
+  });
+  // Garis bantu batas 85% (dataset biasa, garis putus-putus)
+  datasets.push({
+    label: "Batas penuh 85%",
+    data: hours.map(() => 85),
+    borderColor: "#64748b",
+    borderDash: [8, 6],
+    borderWidth: 2,
+    pointStyle: "line",
+    pointRadius: 0,
+    pointHoverRadius: 0,
+  });
+
+  // Legenda berbentuk pil (HTML), menggantikan legenda bawaan Chart.js
+  $("predLegend").innerHTML = datasets.map((d) => d.borderDash
+    ? `<span><i class="dash"></i>${d.label}</span>`
+    : `<span><i style="background:${d.borderColor}"></i>${d.label}</span>`).join("");
+
+  if (predChart) predChart.destroy(); // hapus grafik lama agar tidak bertumpuk
+  predChart = new Chart($("predChart"), {
+    type: "line",
+    data: { labels: hours.map(hourLabel), datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      // Gambar minimal 2x resolusi agar grafik tetap tajam saat zoom/skala layar/proyektor
+      devicePixelRatio: Math.max(window.devicePixelRatio || 1, 2),
+      animation: false,
+      layout: { padding: { right: 16, top: 8 } }, // ruang agar label jam terakhir tidak terpotong
+      interaction: { mode: "index", intersect: false },
+      scales: {
+        y: { min: 0, max: 100, border: { display: false },
+             grid: { color: "#dfe5ee" }, ticks: { callback: (v) => v + "%", stepSize: 20 } },
+        x: { border: { display: false }, grid: { display: false } },
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor: "#0b2f6b", padding: 12, cornerRadius: 12,
+                   callbacks: { label: (c) => ` ${c.dataset.label}: ${c.parsed.y}%` } },
+      },
+    },
+  });
+  lastWindow = { fromHour: data.fromHour, toHour: data.toHour };
+}
+
+if (typeof Chart !== "undefined") {
+  Chart.defaults.font.size = 15;           // terbaca dari proyektor
+  Chart.defaults.font.family = '"Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif';
+  Chart.defaults.color = "#66718a";
+}
+$("predBtn").addEventListener("click", loadPrediction);
+
+// ===== D. Peringatan sensor (slot UNKNOWN dari GET /slots) =====
+let knownAlerts = null; // slotId UNKNOWN pada siklus sebelumnya (null = belum pernah dimuat)
+
+function renderAlerts(slots) {
+  const unknown = slots
+    .filter((s) => s.status === "UNKNOWN")
+    .sort((a, b) => a.floorNumber - b.floorNumber || a.slotId.localeCompare(b.slotId));
+
+  $("alertCount").textContent = unknown.length ? `${unknown.length} peringatan` : "0";
+  $("alertCount").className = unknown.length ? "has" : "none";
+
+  if (unknown.length === 0) {
+    $("alerts").className = "";
+    $("alerts").innerHTML = `<div class="all-ok"><span class="dot">✓</span>
+      <span>Semua sensor normal <small>· tidak ada slot berstatus UNKNOWN</small></span></div>`;
+  } else {
+    const rows = unknown.map((s) => {
+      // Sorot singkat slot yang baru muncul (tidak saat pemuatan pertama)
+      const isNew = knownAlerts !== null && !knownAlerts.has(s.slotId);
+      const last = s.lastUpdate ? "laporan terakhir " + formatWib(s.lastUpdate) : "belum pernah melapor";
+      return `
+        <li class="${isNew ? "new" : ""}">
+          <div class="sid">${s.slotId}</div>
+          <div class="meta">Lantai ${s.floorNumber} · ${last}</div>
+          <div class="why">LED OFF, dikeluarkan dari rekomendasi</div>
+        </li>`;
+    }).join("");
+    $("alerts").className = "";
+    $("alerts").innerHTML = `<ul class="alert-list">${rows}</ul>`;
+  }
+  knownAlerts = new Set(unknown.map((s) => s.slotId));
+}
+
+// ===== Banner galat global =====
+function setBanner(text) {
+  $("banner").textContent = text || "";
+  $("banner").classList.toggle("show", Boolean(text));
+}
+
+// Pilih pesan banner dari hasil-hasil apiGet (null = tidak ada masalah)
+function bannerMessage(results) {
+  if (results.some((r) => r.status === 0)) return "Backend tidak terhubung — data terakhir tetap ditampilkan, mencoba lagi otomatis…";
+  if (results.some((r) => r.status === 401)) return "Token dashboard tidak valid (401)";
+  const failed = results.find((r) => !r.ok);
+  return failed ? `Galat ${failed.status} ${failed.error.code}: ${failed.error.message}` : null;
+}
+
+// ===== Refresh berkala (tiap REFRESH_MS): okupansi (A+B) + peringatan sensor (D) =====
+let refreshing = false; // penjaga: siklus baru tidak dimulai sebelum yang lama selesai
+
+async function refreshLive() {
+  if (refreshing) return;
+  refreshing = true;
+  try {
+    const [floorsRes, slotsRes] = await Promise.all([apiGet("/occupancy/floors"), apiGet("/slots")]);
+    setConnection(floorsRes.status !== 0 && slotsRes.status !== 0);
+    setBanner(bannerMessage([floorsRes, slotsRes]));
+    if (floorsRes.ok) {
+      renderFloors(floorsRes.data.floors);
+      setUpdated(floorsRes.data.generatedAt);
+    }
+    if (slotsRes.ok) renderAlerts(slotsRes.data.slots);
+    // Bila gagal, data terakhir tetap tampil; dicoba lagi di siklus berikutnya.
+  } catch (err) {
+    console.error(err); // jangan sampai halaman berhenti karena satu galat
+  } finally {
+    refreshing = false;
+  }
+}
+
+if (USE_MOCK) $("mockNote").classList.add("show");
+refreshLive();
+setInterval(refreshLive, REFRESH_MS);
+// Grafik hanya dimuat saat halaman dibuka dan saat tombol ditekan.
+// Tunggu font selesai dimuat dulu, karena canvas mengukur lebar huruf saat menggambar.
+(document.fonts ? document.fonts.ready : Promise.resolve()).then(loadPrediction);
+</script>
+</body>
+</html>

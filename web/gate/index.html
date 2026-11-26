@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ParkSense — Smart Gate</title>
+<style>
+  :root {
+    --pink: #e8457a; --pink-soft: #fde4ec;
+    --blue: #1f4e8c; --blue-soft: #e3edf9;
+    --bg: #f6f8fc; --text: #1b2333; --muted: #6b7385;
+    --led-green: #22c55e; --led-red: #ef4444; --led-yellow: #facc15; --led-off: #9ca3af;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", system-ui, sans-serif; background: var(--bg); color: var(--text); }
+  header { background: linear-gradient(90deg, var(--blue), var(--pink)); color: #fff;
+           padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
+  header h1 { margin: 0; font-size: 26px; }
+  #conn { font-size: 14px; padding: 4px 12px; border-radius: 999px; background: rgba(255,255,255,.2); }
+  main { max-width: 1200px; margin: 0 auto; padding: 20px; display: grid; gap: 20px; }
+  .top { display: grid; grid-template-columns: 320px 1fr; gap: 20px; }
+  @media (max-width: 800px) { .top { grid-template-columns: 1fr; } }
+  .card { background: #fff; border-radius: 14px; padding: 18px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+  h2 { margin: 0 0 12px; font-size: 18px; color: var(--blue); }
+  label { font-size: 14px; color: var(--muted); }
+  input { width: 100%; font-size: 20px; padding: 10px; border: 2px solid var(--blue-soft);
+          border-radius: 10px; margin: 6px 0 10px; }
+  button { font-size: 16px; border: 0; border-radius: 10px; padding: 10px 14px; cursor: pointer; }
+  .presets { display: flex; gap: 8px; margin-bottom: 10px; }
+  .presets button { flex: 1; background: var(--blue-soft); color: var(--blue); }
+  #tapBtn { width: 100%; font-size: 22px; font-weight: 700; background: var(--pink); color: #fff; padding: 14px; }
+  #tapBtn:disabled { opacity: .6; cursor: wait; }
+
+  /* Layar gerbang: kontras tinggi agar terbaca dari jauh saat demo */
+  #screen { background: #0f1b2e; color: #fff; border-radius: 14px; padding: 24px; min-height: 260px;
+            display: flex; flex-direction: column; justify-content: center; gap: 14px; }
+  #screenMain { font-size: 40px; font-weight: 800; line-height: 1.15; }
+  #screenSub { font-size: 22px; color: #cbd5e1; }
+  #screen.screen-ok #screenMain { color: #86efac; }
+  #screen.screen-warn #screenMain { color: #fde68a; }
+  #screen.screen-error #screenMain { color: #fca5a5; }
+  #barrier { font-size: 22px; font-weight: 700; padding: 8px 18px; border-radius: 999px; align-self: flex-start; }
+  .barrier-open { background: var(--led-green); color: #052e16; }
+  .barrier-closed { background: var(--led-red); color: #fff; }
+  .barrier-idle { background: #334155; color: #e2e8f0; }
+  #floorSummary { display: flex; gap: 12px; flex-wrap: wrap; }
+  .fs { background: #1e2b44; border-radius: 10px; padding: 10px 16px; font-size: 20px; }
+
+  /* Peta slot */
+  .floor { margin-bottom: 18px; }
+  .floor-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 8px; }
+  .floor-head h3 { margin: 0; font-size: 18px; }
+  .badge { font-size: 13px; padding: 3px 10px; border-radius: 999px; background: var(--blue-soft); color: var(--blue); }
+  .badge.closed { background: #e5e7eb; color: #4b5563; }
+  .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 8px; }
+  @media (max-width: 600px) { .grid { grid-template-columns: repeat(5, 1fr); } }
+  .slot { border: 2px solid #e5e7eb; border-radius: 10px; padding: 8px 4px; text-align: center;
+          font-size: 13px; font-weight: 600; background: #fff; }
+  .slot.recommended { border-color: var(--pink); box-shadow: 0 0 0 3px var(--pink-soft); }
+  .led { width: 22px; height: 22px; border-radius: 50%; margin: 0 auto 4px; background: var(--led-off); }
+  .led.GREEN { background: var(--led-green); box-shadow: 0 0 10px var(--led-green); }
+  .led.RED { background: var(--led-red); box-shadow: 0 0 10px var(--led-red); }
+  .led.YELLOW { background: var(--led-yellow); box-shadow: 0 0 12px var(--led-yellow); animation: blink 1s infinite; }
+  .floor.closed .grid { opacity: .35; filter: grayscale(1); }
+  @keyframes blink { 50% { opacity: .4; } }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 14px; color: var(--muted); margin-bottom: 12px; }
+  .legend .led { display: inline-block; width: 14px; height: 14px; margin: 0 4px -2px 0; animation: none; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🅿️ ParkSense · Smart Gate</h1>
+  <span id="conn">Menghubungkan…</span>
+</header>
+
+<main>
+  <div class="top">
+    <section class="card">
+      <h2>Pembaca Kartu (virtual)</h2>
+      <div class="presets">
+        <button id="validBtn">Kartu valid</button>
+        <button id="invalidBtn">Kartu tidak valid</button>
+      </div>
+      <label for="cardId">ID kartu</label>
+      <input id="cardId" placeholder="RFID-04A1B7C2" autocomplete="off">
+      <button id="tapBtn">Tap</button>
+    </section>
+
+    <section id="screen" class="screen-idle">
+      <div id="screenMain">Silakan tap kartu</div>
+      <div id="screenSub">Selamat datang di gedung parkir motor</div>
+      <div id="floorSummary"></div>
+      <div id="barrier" class="barrier-idle">■ PALANG TERTUTUP</div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>Peta Slot & LED</h2>
+    <div class="legend">
+      <span><span class="led GREEN"></span>Kosong</span>
+      <span><span class="led RED"></span>Terisi</span>
+      <span><span class="led YELLOW"></span>Rekomendasi</span>
+      <span><span class="led OFF"></span>Tidak diketahui (sensor bermasalah)</span>
+    </div>
+    <div id="map">Memuat data slot…</div>
+  </section>
+</main>
+
+<script>
+// ===== Konfigurasi: satu-satunya tempat URL dan kunci =====
+const CONFIG = {
+  API_BASE: window.location.origin && window.location.origin.startsWith('http')
+    ? window.location.origin + '/api/v1'
+    : 'http://localhost:8000/api/v1',
+  DEVICE_KEY: 'parksense-dev-key',
+  GATE_ID: 'GATE-IN-01',
+  VEHICLE_TYPE: 'MOTORCYCLE',
+  VALID_CARD: 'RFID-04A1B7C2',
+  INVALID_CARD: 'RFID-00000000',
+  REFRESH_MS: 2000,        // refresh peta slot tiap 2 detik
+  BARRIER_OPEN_MS: 10000,  // lama palang terlihat terbuka di layar
+};
+
+const $ = (id) => document.getElementById(id);
+let recommendedSlotId = null; // slot yang disorot di peta
+let barrierTimer = null;
+let refreshing = false;
+
+// Waktu sekarang dalam ISO 8601 dengan zona +07:00 (sesuai konvensi kontrak)
+function nowJakartaIso() {
+  const shifted = new Date(Date.now() + 7 * 3600 * 1000);
+  return shifted.toISOString().slice(0, 19) + '+07:00';
+}
+
+// Pemanggil API: selalu mengirim X-Device-Key, mengembalikan status + body JSON
+async function api(path, options = {}) {
+  const res = await fetch(CONFIG.API_BASE + path, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', 'X-Device-Key': CONFIG.DEVICE_KEY },
+  });
+  let body = {};
+  try { body = await res.json(); } catch { /* respons tanpa JSON */ }
+  return { status: res.status, body };
+}
+
+async function fetchFloors() {
+  try {
+    const { status, body } = await api('/occupancy/floors');
+    return status === 200 ? body.floors : null;
+  } catch { return null; }
+}
+
+// ===== Layar gerbang =====
+function showScreen({ kind, main, sub = '', barrier, floors = null }) {
+  $('screen').className = 'screen-' + kind;
+  $('screenMain').textContent = main;
+  $('screenSub').textContent = sub;
+  $('floorSummary').innerHTML = floors
+    ? floors.map(f => `<div class="fs">Lantai ${f.floorNumber}: ${
+        f.isOpen ? `<b>${f.available}</b> kosong` : 'ditutup'}</div>`).join('')
+    : '';
+  setBarrier(barrier);
+}
+
+function setBarrier(state) {
+  clearTimeout(barrierTimer);
+  const labels = { open: '▲ PALANG TERBUKA', closed: '✕ AKSES DITOLAK', idle: '■ PALANG TERTUTUP' };
+  $('barrier').className = 'barrier-' + state;
+  $('barrier').textContent = labels[state];
+  // Palang menutup kembali otomatis setelah motor lewat
+  if (state === 'open') barrierTimer = setTimeout(() => setBarrier('idle'), CONFIG.BARRIER_OPEN_MS);
+}
+
+// ===== Tap kartu -> POST /gate/entry-tap =====
+async function tap() {
+  const cardId = $('cardId').value.trim();
+  if (!cardId) {
+    showScreen({ kind: 'error', main: 'Masukkan ID kartu', barrier: 'idle' });
+    return;
+  }
+  $('tapBtn').disabled = true;
+  showScreen({ kind: 'idle', main: 'Memproses kartu…', sub: cardId, barrier: 'idle' });
+  try {
+    const { status, body } = await api('/gate/entry-tap', {
+      method: 'POST',
+      body: JSON.stringify({
+        gateId: CONFIG.GATE_ID,
+        cardId,
+        vehicleType: CONFIG.VEHICLE_TYPE,
+        tapTime: nowJakartaIso(),
+      }),
+    });
+    await handleTapResponse(status, body);
+  } catch {
+    showScreen({ kind: 'error', main: 'Server tidak terjangkau',
+                 sub: 'Periksa backend di ' + CONFIG.API_BASE, barrier: 'idle' });
+  } finally {
+    $('tapBtn').disabled = false;
+    refreshSlots(); // perbarui peta segera agar LED kuning langsung terlihat
+  }
+}
+
+async function handleTapResponse(status, body) {
+  if (status === 200 && body.recommendation) {
+    // TC-01: ada rekomendasi -> tampilkan lantai & slot, palang terbuka
+    const rec = body.recommendation;
+    recommendedSlotId = rec.slotId;
+    showScreen({ kind: 'ok', main: `Lantai ${rec.floorNumber} · Slot ${rec.slotId}`,
+                 sub: body.displayMessage, barrier: 'open' });
+  } else if (status === 200) {
+    // TC-02: kartu valid tapi tidak ada slot -> palang TETAP terbuka + ketersediaan per lantai
+    recommendedSlotId = null;
+    showScreen({ kind: 'warn', main: body.displayMessage || 'Parkir penuh',
+                 sub: 'Tidak ada slot yang bisa direkomendasikan', barrier: 'open',
+                 floors: await fetchFloors() });
+  } else if (status === 500 && body.code === 'RECOMMENDATION_FAILED') {
+    // TC-09: rekomendasi gagal -> palang WAJIB tetap terbuka, tampilkan ringkasan lantai dari respons
+    recommendedSlotId = null;
+    showScreen({ kind: 'warn', main: body.displayMessage || 'Rekomendasi tidak tersedia',
+                 sub: 'Silakan cari slot kosong di lantai yang tersedia', barrier: 'open',
+                 floors: body.floors || await fetchFloors() });
+  } else if (status === 400 && body.code === 'INVALID_CARD') {
+    // TC-03: kartu tidak valid -> palang tidak terbuka
+    showScreen({ kind: 'error', main: 'Kartu ditolak',
+                 sub: body.message || 'Kartu tidak terdaftar', barrier: 'closed' });
+  } else if (status === 401) {
+    showScreen({ kind: 'error', main: 'Gerbang tidak terotorisasi',
+                 sub: 'Periksa DEVICE_KEY di konfigurasi', barrier: 'idle' });
+  } else {
+    showScreen({ kind: 'error', main: `Galat ${status} ${body.code || ''}`,
+                 sub: body.message || 'Terjadi kesalahan', barrier: 'idle' });
+  }
+}
+
+// ===== Peta slot: GET /slots + GET /occupancy/floors tiap 2 detik =====
+async function refreshSlots() {
+  if (refreshing) return; // hindari permintaan bertumpuk
+  refreshing = true;
+  try {
+    const [slotsRes, floorsRes] = await Promise.all([api('/slots'), api('/occupancy/floors')]);
+    if (slotsRes.status !== 200 || floorsRes.status !== 200) throw new Error('HTTP error');
+    renderMap(slotsRes.body.slots, floorsRes.body.floors);
+    const t = new Date(slotsRes.body.generatedAt).toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta' });
+    $('conn').textContent = '● Terhubung · ' + t;
+  } catch {
+    $('conn').textContent = '○ Backend offline';
+  } finally {
+    refreshing = false;
+  }
+}
+
+function renderMap(slots, floors) {
+  // Kelompokkan slot per lantai
+  const byFloor = {};
+  for (const s of slots) (byFloor[s.floorNumber] ||= []).push(s);
+
+  // Lepas sorotan bila slot rekomendasi sudah tidak kuning (TTL habis atau sudah terisi)
+  const rec = slots.find(s => s.slotId === recommendedSlotId);
+  if (!rec || rec.ledColor !== 'YELLOW') recommendedSlotId = null;
+
+  $('map').innerHTML = [...floors].sort((a, b) => a.floorNumber - b.floorNumber).map(f => {
+    const list = (byFloor[f.floorNumber] || []).sort((a, b) => a.slotId.localeCompare(b.slotId));
+    const info = f.isOpen
+      ? `${f.available} kosong · ${f.occupied} terisi · ${f.unknown} tidak diketahui`
+      : 'DITUTUP';
+    return `<section class="floor ${f.isOpen ? '' : 'closed'}">
+        <div class="floor-head"><h3>Lantai ${f.floorNumber}</h3>
+          <span class="badge ${f.isOpen ? '' : 'closed'}">${info}</span></div>
+        <div class="grid">${list.map(slotHtml).join('')}</div>
+      </section>`;
+  }).join('');
+}
+
+function slotHtml(s) {
+  // Warna LED langsung dari backend; nilai selain GREEN/RED/YELLOW dianggap OFF
+  const color = ['GREEN', 'RED', 'YELLOW'].includes(s.ledColor) ? s.ledColor : 'OFF';
+  const cls = s.slotId === recommendedSlotId ? 'slot recommended' : 'slot';
+  const tip = `${s.slotId} · ${s.status} · ${s.lastUpdate ?? 'belum melapor'}`;
+  return `<div class="${cls}" title="${tip}"><div class="led ${color}"></div>${s.slotId.split('-')[1]}</div>`;
+}
+
+// ===== Event =====
+$('validBtn').onclick = () => { $('cardId').value = CONFIG.VALID_CARD; };
+$('invalidBtn').onclick = () => { $('cardId').value = CONFIG.INVALID_CARD; };
+$('tapBtn').onclick = tap;
+$('cardId').addEventListener('keydown', e => { if (e.key === 'Enter') tap(); });
+
+refreshSlots();
+setInterval(refreshSlots, CONFIG.REFRESH_MS);
+</script>
+</body>
+</html>
