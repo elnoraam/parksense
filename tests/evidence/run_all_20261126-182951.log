@@ -1,0 +1,61 @@
+ParkSense run_all - 2026-11-26T18:29:51+07:00 - http://127.0.0.1:8000/api/v1
+
+[TC-01] Tap valid jam puncak
+  POST /gate/entry-tap (kartu valid, peak_hour) -> 200 {"recommendation": {"floorNumber": 2, "slotId": "F2-A05"}, "gateAction": "OPEN_BARRIER", "displayMessage": "Lantai 2 - Slot F2-A05"}
+  LED F2-A05 = YELLOW
+  => LULUS 
+
+[TC-02] Semua lantai penuh
+  POST /gate/entry-tap (all_full) -> 200 {"recommendation": null, "gateAction": "OPEN_BARRIER", "displayMessage": "Parkir penuh. Lantai 1: 0 tersedia | Lantai 2: 0 tersedia"}
+  => LULUS 
+
+[TC-03] Kartu tidak valid
+  POST /gate/entry-tap (kartu RFID-TIDAK-ADA) -> 400 {"status": 400, "code": "INVALID_CARD", "message": "Kartu tidak terdaftar; palang tidak dibuka"}
+  => LULUS 
+
+[TC-04] Motor parkir lalu keluar
+  available lantai 1 awal = 20
+  PUT F1-A05 OCCUPIED -> 200 {"slotId": "F1-A05", "currentStatus": "OCCUPIED", "ledCommand": {"color": "RED", "sent": true}}
+  available lantai 1 setelah parkir = 19
+  PUT F1-A05 AVAILABLE -> 200 {"slotId": "F1-A05", "currentStatus": "AVAILABLE", "ledCommand": {"color": "GREEN", "sent": true}}
+  available lantai 1 setelah keluar = 20
+  => LULUS 
+
+[TC-05] Sensor bermasalah
+  PUT F1-A03 rawSensorValue=500 -> 200 {"slotId": "F1-A03", "currentStatus": "UNKNOWN", "ledCommand": {"color": "OFF", "sent": true}, "anomaly": "OUT_OF_RANGE"}
+  lantai 1 setelah sensor_stale: {"floorNumber": 1, "isOpen": true, "total": 20, "available": 18, "occupied": 0, "unknown": 2}
+  F1-A05 status=UNKNOWN led=OFF
+  POST /gate/entry-tap (setelah sensor_stale) -> 200 {"recommendation": {"floorNumber": 1, "slotId": "F1-A01"}, "gateAction": "OPEN_BARRIER", "displayMessage": "Lantai 1 - Slot F1-A01"}
+  => LULUS 
+
+[TC-06] Prediksi jam puncak
+  GET predictions 6..9 -> 200 {"fromHour": 6, "toHour": 9, "predictions": [{"hour": 6, "floorNumber": 1, "predictedOccupancyPercent": 21.7}, {"hour": 6, "floorNumber": 2, "predictedOccupancyPercent": 0.0}, {"hour": 7, "floorNumber": 1, "predictedOccupancyPercent": 69.3}, {"hour": 7, "floorNumber": 2, "predictedOccupancyPercent": 0.0}, {"hour": 8, "floorNumber": 1, "predictedOccupancyPercent": 94.8}, {"hour": 8, "floorNumber": 2, "predictedOccupancyPercent": 37.2}, {"hour": 9, "floorNumber": 1, "predictedOccupancyPercent": 97.2}, {"hour": 9, "floorNumber": 2, "predictedOccupancyPercent": 46.0}], "advisory": "Lantai 1 diperkirakan terisi 97% pada pukul 09.00. Disarankan membuka lantai 2 lebih awal."}
+  GET predictions 9..6 -> 400 {"status": 400, "code": "INVALID_TIME_WINDOW", "message": "fromHour harus lebih kecil dari toHour dan berada di rentang 0-23"}
+  => LULUS 
+
+[TC-07] Otorisasi
+  POST /gate/entry-tap tanpa kunci -> 401 {"status": 401, "code": "UNAUTHORIZED", "message": "Header X-Device-Key tidak ada atau salah"}
+  PUT /slots/F1-A01/status kunci salah -> 401 {"status": 401, "code": "UNAUTHORIZED", "message": "Header X-Device-Key tidak ada atau salah"}
+  GET predictions dengan X-Device-Key (harus Bearer) -> 401 {"status": 401, "code": "UNAUTHORIZED", "message": "Bearer token tidak ada atau salah"}
+  => LULUS 
+
+[TC-08] Status tidak valid
+  PUT F1-A01 status=BROKEN -> 400 {"status": 400, "code": "INVALID_STATUS", "message": "status harus salah satu dari AVAILABLE, OCCUPIED, UNKNOWN"}
+  => LULUS 
+
+[TC-09] Rekomendasi gagal
+  POST /gate/entry-tap (fault aktif) -> 500 {"status": 500, "code": "RECOMMENDATION_FAILED", "message": "Rekomendasi gagal; palang tetap dibuka", "gateAction": "OPEN_BARRIER", "displayMessage": "Silakan masuk. Lantai 1: 20 tersedia", "floors": [{"floorNumber": 1, "isOpen": true, "total": 20, "available": 20, "occupied": 0, "unknown": 0}, {"floorNumber": 2, "isOpen": false, "total": 20, "available": 20, "occupied": 0, "unknown": 0}]}
+  setelah dipulihkan, tap valid -> 200
+  => LULUS 
+
+Ringkasan
+  TC-01: LULUS
+  TC-02: LULUS
+  TC-03: LULUS
+  TC-04: LULUS
+  TC-05: LULUS
+  TC-06: LULUS
+  TC-07: LULUS
+  TC-08: LULUS
+  TC-09: LULUS
+  9/9 lulus
